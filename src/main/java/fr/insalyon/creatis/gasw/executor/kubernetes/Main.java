@@ -11,7 +11,7 @@ public class Main {
 			K8sManager manager = new K8sManager("wow-workflow-item");
 			manager.init();
 
-			manager.testJob();
+			// manager.testJob();
 			manager.destroy();
 
 		} catch (Exception e) {

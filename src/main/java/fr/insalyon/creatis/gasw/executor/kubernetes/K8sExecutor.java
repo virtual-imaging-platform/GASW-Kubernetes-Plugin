@@ -16,6 +16,7 @@ import fr.insalyon.creatis.gasw.executor.K8sStatus;
 import io.kubernetes.client.openapi.apis.BatchV1Api;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Container;
+import io.kubernetes.client.openapi.models.V1DeleteOptions;
 import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1JobSpec;
 import io.kubernetes.client.openapi.models.V1JobStatus;
@@ -149,7 +150,9 @@ public class K8sExecutor {
 		BatchV1Api api = conf.getK8sBatchApi();
 
 		if (job != null) {
-			api.deleteNamespacedJob(job.getMetadata().getName(), conf.getK8sNamespace());
+			System.err.println("je delete le job");
+			api.deleteNamespacedJob(job.getMetadata().getName(), conf.getK8sNamespace())
+				.propagationPolicy("Foreground").execute();
 			this.job = null;
 		}
 	}

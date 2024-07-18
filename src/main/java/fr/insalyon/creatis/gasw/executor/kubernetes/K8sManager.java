@@ -74,7 +74,6 @@ public class K8sManager {
 		}
 		executor.getOutput();
 		executor.clean();
-
 	}
 	// public void resubmit(K8sExecutor job)
 }

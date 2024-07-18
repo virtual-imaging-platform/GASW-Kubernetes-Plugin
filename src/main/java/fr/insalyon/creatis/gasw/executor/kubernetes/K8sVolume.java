@@ -38,7 +38,7 @@ public class K8sVolume {
             .metadata(new V1ObjectMeta().name(name))
             .spec(new V1PersistentVolumeSpec()
                 .accessModes(Arrays.asList("ReadWriteMany"))
-                .capacity(Map.of("storage", new Quantity("1Gi")))
+				.capacity(Map.of("storage", new Quantity("1Gi")))
             		.nfs(new V1NFSVolumeSource()
                     .path(getSubMountPath())
                     .server(conf.getNFSAddress())
@@ -68,7 +68,7 @@ public class K8sVolume {
 	public void deletePV() throws Exception {
 		CoreV1Api api = conf.getK8sCoreApi();
 
-		api.deletePersistentVolume(name);
+		api.deletePersistentVolume(name).execute();
 	}
 
 	/**
