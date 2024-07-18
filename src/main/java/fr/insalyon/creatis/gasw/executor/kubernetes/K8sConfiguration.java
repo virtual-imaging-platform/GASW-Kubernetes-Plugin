@@ -20,18 +20,16 @@ public class K8sConfiguration {
 
 	private static K8sConfiguration instance;
 
-	/// K8s objects
+	// K8s objects
 	private CoreV1Api				k8sCoreApi;
 	private BatchV1Api				k8sBatchApi;
 	private StorageV1Api			k8sStorageApi;
 
-	private String					workflow;
-
-	/// About Plugin configuration
-	// K8s
+	// K8s configuration
 	private String					k8sAddress;
 	private String					k8sToken;
 	private String					k8sNamespace;
+
 	// NFS
 	private String					nfsAddress;
 	private String					nfsPath;
@@ -46,7 +44,6 @@ public class K8sConfiguration {
 	public String getK8sNamespace() { return k8sNamespace; }
 	public String getNFSAddress() { return nfsAddress; }
 	public String getNFSPath() { return nfsPath; }
-	public String getWorkflow() { return workflow; }
 
 	public static K8sConfiguration getInstance() {
 		if (instance == null)
@@ -54,8 +51,7 @@ public class K8sConfiguration {
 		return instance;
 	}
 
-	void init(String configurationFile, String workflow) {
-		this.workflow = workflow;
+	void init(String configurationFile) {
 		loadConfiguration(configurationFile);
 		createLocalClient();
 	}

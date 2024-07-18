@@ -1,13 +1,22 @@
 package fr.insalyon.creatis.gasw.executor.kubernetes;
 
-import java.util.UUID;
-
 /**
  * Main
  */
 public class Main {
 
 	public static void main(String[] args) {
-		K8sConfiguration.getInstance().init("config.json", "wow-workflow-item");
+		try {
+			K8sConfiguration.getInstance().init("config.json");
+			K8sManager manager = new K8sManager("wow-workflow-item");
+			manager.init();
+
+			manager.testJob();
+			manager.destroy();
+
+		} catch (Exception e) {
+			System.err.println("system error : " + e.getMessage());
+		}
+
 	}
 }

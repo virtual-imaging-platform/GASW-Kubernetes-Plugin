@@ -1,31 +1,43 @@
 package fr.insalyon.creatis.gasw.executor.kubernetes;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
+import org.json.JSONObject;
+
+import fr.insalyon.creatis.gasw.executor.K8sStatus;
+import io.kubernetes.client.openapi.apis.BatchV1Api;
+import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Container;
 import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1JobSpec;
+import io.kubernetes.client.openapi.models.V1JobStatus;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimVolumeSource;
 import io.kubernetes.client.openapi.models.V1PodSpec;
 import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
-import io.kubernetes.client.proto.V1;
 
 /**
  * K8sExecutor
  */
 public class K8sExecutor {
 
-	private String 					jobId;
-	private List<String> 			command;
-	private String 					dockerImage;
-	private K8sVolume 				volume;
-	private V1Job					job;
-	private final K8sConfiguration 	conf;
+	private final K8sConfiguration conf;
+
+	private String jobId;
+	private String dockerImage;
+	private List<String> command;
+	private K8sVolume volume;
+	private V1Job job;
 
 	public K8sExecutor(String jobId, List<String> command, String dockerImage, K8sVolume volume) {
 		conf = K8sConfiguration.getInstance();
@@ -34,51 +46,174 @@ public class K8sExecutor {
 		this.dockerImage = dockerImage;
 		this.volume = volume;
 
-		V1Container default = createContainer(dockerImage, command);
-		configure(null);
+		V1Container ctn = createContainer(this.dockerImage, this.command);
+		configure(ctn);
 	}
 
-	private V1Container createContainer(String dockerImage, List<String> command) {
-		V1Container ctn = new V1Container()
-			.name(jobId + "-container-" + UUID.randomUUID())
-			.image(dockerImage)
-			.volumeMounts(Arrays.asList(new V1VolumeMount()
-				.name(volume.getClaimName())
-				.mountPath(K8sConstants.mountPathContainer)
-				.subPath("test") // la changer par le nom du workflow (le dossier en tout cas)
-			))
-			.command(command);
-		return ctn;
-	}
-
+	/**
+	 * This create the V1Job item and configure alls specs
+	 * 
+	 * @apiNote Can be easilly upgrade to List<V1Container>
+	 * @param container
+	 */
 	private void configure(V1Container container) {
 		V1ObjectMeta meta = new V1ObjectMeta().name(jobId).namespace(conf.getK8sNamespace());
 
 		V1PodSpec podSpec = new V1PodSpec()
-			.containers(Arrays.asList(container))
-			.restartPolicy("Never")
-			.volumes(Arrays.asList(new V1Volume()
-				.name(volume.getName())
-				.persistentVolumeClaim(new V1PersistentVolumeClaimVolumeSource()
-					.claimName(volume.getClaimName())
-				)
-			));
+				.containers(Arrays.asList(container))
+				.restartPolicy("Never")
+				.volumes(Arrays.asList(new V1Volume()
+						.name(volume.getName())
+						.persistentVolumeClaim(new V1PersistentVolumeClaimVolumeSource()
+								.claimName(volume.getClaimName()))));
 
 		V1PodTemplateSpec podspecTemplate = new V1PodTemplateSpec().spec(podSpec);
 
 		V1JobSpec jobSpec = new V1JobSpec()
-			.template(podspecTemplate)
-			.backoffLimit(0);
-		
-		job = new V1Job()
-			.spec(jobSpec)
-			.metadata(meta);			
-	}
-	
-	// public void start(); this has to volume.isAvailable()
-	// public void kill();
-	// public void wait();
+				.ttlSecondsAfterFinished(600)
+				.template(podspecTemplate)
+				.backoffLimit(0);
 
-	// public GaswStatus getStatus();
+		job = new V1Job()
+				.spec(jobSpec)
+				.metadata(meta);
+	}
+
+	private V1Container createContainer(String dockerImage, List<String> command) {
+		V1Container ctn = new V1Container()
+				.name(jobId + "-container-" + UUID.randomUUID())
+				.image(dockerImage)
+				.workingDir(K8sConstants.mountPathContainer) // may be to change
+				.volumeMounts(Arrays.asList(new V1VolumeMount()
+						.name(volume.getName())
+						.mountPath(K8sConstants.mountPathContainer)
+				// .subPath(K8sConstants.subPath()) // la changer par le nom du workflow (le
+				// dossier en tout cas)
+				))
+				.command(getWrappedCommand());
+		return ctn;
+	}
+
+	/**
+	 * Stdout & stderr redirectors
+	 * 
+	 * @return Initial command redirected to out & err files
+	 */
+	private List<String> getWrappedCommand() {
+		List<String> wrappedCommand = new ArrayList<String>(command);
+		Integer last = wrappedCommand.size() - 1;
+
+		String redirectStdout = "> " + getContainerLogPath("stdout") + " ";
+		String redirectStderr = "2> " + getContainerLogPath("stderr") + " ";
+		String redirectCmd = "exec " + redirectStdout + redirectStderr + ";";
+		wrappedCommand.set(last, redirectCmd + " " + wrappedCommand.get(last));
+		return wrappedCommand;
+	}
+
+	/**
+	 * @param extension (stdout or stderr)
+	 * @return file that contain the log (inside container)
+	 */
+	private String getContainerLogPath(String extension) {
+		return K8sConstants.mountPathContainer + K8sConstants.subLogPath + jobId + "." + extension;
+	}
+
+	/**
+	 * @param extension (stdout or stderr)
+	 * @return file that contain the log (from nfs server machine)
+	 */
+	private String getLogPath(String extension) {
+		return volume.getSubMountPath() + K8sConstants.subLogPath + jobId + "." + extension;
+	}
+
+
+	
+
+	public void start() throws Exception {
+		BatchV1Api api = conf.getK8sBatchApi();
+		System.err.println("statut du volume " + volume.isAvailable());
+
+		if (job == null || !volume.isAvailable()) {
+			System.out.println("Impossible to start job, isn't configure or volume not ready !");
+		} else {
+			api.createNamespacedJob(conf.getK8sNamespace(), job).execute();
+		}
+	}
+
+	/**
+	 * Kill method stop running pods and erase job for k8s api memory.
+	 * 
+	 * @throws Exception
+	 */
+	public void kill() throws Exception {
+		BatchV1Api api = conf.getK8sBatchApi();
+
+		if (job != null) {
+			api.deleteNamespacedJob(job.getMetadata().getName(), conf.getK8sNamespace());
+			this.job = null;
+		}
+	}
+
+	/**
+	 * This function do the same as kill but check for the status to be terminated.
+	 * 
+	 * @throws Exception
+	 */
+	public void clean() throws Exception {
+		if (job != null && getStatus() == K8sStatus.FINISHED)
+			kill();
+	}
+
+	/**
+	 * Develop function purpose (blocking)
+	 * 
+	 * @throws Exception
+	 */
+	public void waitForCompletion() throws Exception {
+		if (job != null) {
+			while (getStatus() != K8sStatus.FINISHED)
+				TimeUnit.MILLISECONDS.sleep(200);
+		}
+	}
+
+	public K8sStatus getStatus() {
+		BatchV1Api api = conf.getK8sBatchApi();
+
+		if (job != null) {
+			try {
+				V1Job updatedJob = api.readNamespacedJob(job.getMetadata().getName(), conf.getK8sNamespace()).execute();
+				V1JobStatus status = updatedJob.getStatus();
+				if (status.getFailed() != null && status.getFailed() > 0)
+					return K8sStatus.FAILED;
+				else if (status.getActive() != null && status.getActive() > 0)
+					return K8sStatus.RUNNING;
+				else if (status.getSucceeded() != null && status.getSucceeded() > 0)
+					return K8sStatus.FINISHED;
+				else
+					return K8sStatus.PENDING;
+			} catch (Exception e) {
+				System.err.println("impossible de récuperer l'état du job : " + e.getMessage());
+				return K8sStatus.PENDING;
+			}
+		}
+		return K8sStatus.PENDING;
+	}
+
+	public Map<String, String> getOutput() {
+		Map<String, String> test = new HashMap<String, String>();
+
+		try {
+			String stdout = Files.readString(Paths.get(getLogPath("stdout")));
+			String stderr = Files.readString(Paths.get(getLogPath("stderr")));
+
+			System.out.println(stdout);
+			System.out.println(stderr);
+			return (test);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return (test);
+
+		}
+	}
 	// public GaswOuput getOutputs();
 }

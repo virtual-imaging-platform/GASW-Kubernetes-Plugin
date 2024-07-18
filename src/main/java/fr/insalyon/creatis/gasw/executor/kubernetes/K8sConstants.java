@@ -4,4 +4,5 @@ public class K8sConstants {
 
 	public static String storageClassName = "";
 	public static String mountPathContainer = "/app/";
+	public static String subLogPath = "";
 }

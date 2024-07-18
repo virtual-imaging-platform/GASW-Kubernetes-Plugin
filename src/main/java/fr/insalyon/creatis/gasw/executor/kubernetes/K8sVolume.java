@@ -22,13 +22,16 @@ public class K8sVolume {
 	private String 					name;
 	private final K8sConfiguration	conf;
 
-	public K8sVolume(K8sConfiguration conf) {
+	public K8sVolume(K8sConfiguration conf, String workflowName) {
 		this.conf = conf;
-		this.name = conf.getWorkflow();
+		this.name = workflowName;
 	}
 
 	public String getName() { return name; }
 	public String getClaimName() { return name + "-claim"; }
+
+	// LA REMPLACER PAR LE NOM DU WORKFLOW
+	public String getSubMountPath() { return conf.getNFSPath() + "test/"; } 
 
 	public void createPV () throws Exception {
 		pv = new V1PersistentVolume()
@@ -37,7 +40,7 @@ public class K8sVolume {
                 .accessModes(Arrays.asList("ReadWriteMany"))
                 .capacity(Map.of("storage", new Quantity("1Gi")))
             		.nfs(new V1NFSVolumeSource()
-                    .path(conf.getNFSPath())
+                    .path(getSubMountPath())
                     .server(conf.getNFSAddress())
                 ));
 		conf.getK8sCoreApi().createPersistentVolume(pv).execute();
@@ -78,7 +81,8 @@ public class K8sVolume {
 		try {
 			V1PersistentVolume requestPv = api.readPersistentVolume(name).execute();
 			V1PersistentVolumeClaim requestPvc = api.readNamespacedPersistentVolumeClaim(getClaimName(), conf.getK8sNamespace()).execute();
-
+		
+			System.err.println(requestPv.getStatus().getPhase() + " | " + requestPvc.getStatus().getPhase());
 			if (requestPv.getStatus().getPhase().equals("Bound") && requestPvc.getStatus().getPhase().equals("Bound"))
 				return true;
 			return false;
