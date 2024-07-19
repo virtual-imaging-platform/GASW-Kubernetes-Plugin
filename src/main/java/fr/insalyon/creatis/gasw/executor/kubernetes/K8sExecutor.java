@@ -7,16 +7,11 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-
-import org.json.JSONObject;
 
 import fr.insalyon.creatis.gasw.executor.K8sStatus;
 import io.kubernetes.client.openapi.apis.BatchV1Api;
-import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Container;
-import io.kubernetes.client.openapi.models.V1DeleteOptions;
 import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1JobSpec;
 import io.kubernetes.client.openapi.models.V1JobStatus;
@@ -39,6 +34,7 @@ public class K8sExecutor {
 	private List<String> command;
 	private K8sVolume volume;
 	private V1Job job;
+	private boolean submited = false;
 
 	public K8sExecutor(String jobId, List<String> command, String dockerImage, K8sVolume volume) {
 		conf = K8sConfiguration.getInstance();
@@ -53,7 +49,6 @@ public class K8sExecutor {
 
 	/**
 	 * This create the V1Job item and configure alls specs
-	 * 
 	 * @apiNote Can be easilly upgrade to List<V1Container>
 	 * @param container
 	 */
@@ -71,7 +66,7 @@ public class K8sExecutor {
 		V1PodTemplateSpec podspecTemplate = new V1PodTemplateSpec().spec(podSpec);
 
 		V1JobSpec jobSpec = new V1JobSpec()
-				.ttlSecondsAfterFinished(600)
+				.ttlSecondsAfterFinished(K8sConstants.ttlJob)
 				.template(podspecTemplate)
 				.backoffLimit(0);
 
@@ -82,14 +77,12 @@ public class K8sExecutor {
 
 	private V1Container createContainer(String dockerImage, List<String> command) {
 		V1Container ctn = new V1Container()
-				.name(jobId + "-container-" + UUID.randomUUID())
+				.name(jobId)
 				.image(dockerImage)
 				.workingDir(K8sConstants.mountPathContainer) // may be to change
 				.volumeMounts(Arrays.asList(new V1VolumeMount()
 						.name(volume.getName())
 						.mountPath(K8sConstants.mountPathContainer)
-				// .subPath(K8sConstants.subPath()) // la changer par le nom du workflow (le
-				// dossier en tout cas)
 				))
 				.command(getWrappedCommand());
 		return ctn;
@@ -97,7 +90,6 @@ public class K8sExecutor {
 
 	/**
 	 * Stdout & stderr redirectors
-	 * 
 	 * @return Initial command redirected to out & err files
 	 */
 	private List<String> getWrappedCommand() {
@@ -127,9 +119,6 @@ public class K8sExecutor {
 		return volume.getSubMountPath() + K8sConstants.subLogPath + jobId + "." + extension;
 	}
 
-
-	
-
 	public void start() throws Exception {
 		BatchV1Api api = conf.getK8sBatchApi();
 		System.err.println("statut du volume " + volume.isAvailable());
@@ -138,12 +127,12 @@ public class K8sExecutor {
 			System.out.println("Impossible to start job, isn't configure or volume not ready !");
 		} else {
 			api.createNamespacedJob(conf.getK8sNamespace(), job).execute();
+			submited = true;
 		}
 	}
 
 	/**
 	 * Kill method stop running pods and erase job for k8s api memory.
-	 * 
 	 * @throws Exception
 	 */
 	public void kill() throws Exception {
@@ -159,7 +148,6 @@ public class K8sExecutor {
 
 	/**
 	 * This function do the same as kill but check for the status to be terminated.
-	 * 
 	 * @throws Exception
 	 */
 	public void clean() throws Exception {
@@ -169,7 +157,6 @@ public class K8sExecutor {
 
 	/**
 	 * Develop function purpose (blocking)
-	 * 
 	 * @throws Exception
 	 */
 	public void waitForCompletion() throws Exception {
@@ -183,6 +170,8 @@ public class K8sExecutor {
 		BatchV1Api api = conf.getK8sBatchApi();
 
 		if (job != null) {
+			if (submited == false)
+				return K8sStatus.UNSUBMITED;
 			try {
 				V1Job updatedJob = api.readNamespacedJob(job.getMetadata().getName(), conf.getK8sNamespace()).execute();
 				V1JobStatus status = updatedJob.getStatus();
@@ -203,20 +192,17 @@ public class K8sExecutor {
 	}
 
 	public Map<String, String> getOutput() {
-		Map<String, String> test = new HashMap<String, String>();
+		Map<String, String> outputs = new HashMap<String, String>();
 
 		try {
-			String stdout = Files.readString(Paths.get(getLogPath("stdout")));
-			String stderr = Files.readString(Paths.get(getLogPath("stderr")));
-
-			System.out.println(stdout);
-			System.out.println(stderr);
-			return (test);
+			outputs.put("stdout", Files.readString(Paths.get(getLogPath("stdout"))));
+			outputs.put("stderr", Files.readString(Paths.get(getLogPath("stderr"))));
+			return (outputs);
 		} catch (Exception e) {
+			System.err.println("failed to read outputs files");
 			e.printStackTrace();
-			return (test);
+			return (outputs);
 
 		}
 	}
-	// public GaswOuput getOutputs();
 }

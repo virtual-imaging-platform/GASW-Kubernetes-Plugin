@@ -1,8 +1,9 @@
 package fr.insalyon.creatis.gasw.executor.kubernetes;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import fr.insalyon.creatis.gasw.executor.K8sStatus;
@@ -12,12 +13,14 @@ import io.kubernetes.client.openapi.models.V1NamespaceList;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 
 public class K8sManager {
-	private K8sVolume 			volume;
-	private String				workflowName;
-	private List<K8sExecutor> 	jobs;
+	private String						workflowName;
+	private K8sVolume 					volume;
+	private volatile List<K8sExecutor> 	jobs;
+	private Boolean						end;
 
 	public K8sManager(String workflowName) {
 		this.workflowName = workflowName;
+		this.jobs = new ArrayList<K8sExecutor>();
 	}
 
 	public void init() throws Exception {
@@ -28,12 +31,12 @@ public class K8sManager {
 		volume = new K8sVolume(conf, workflowName);
 		volume.createPV();
 		volume.createPVC();
-
-		while (!volume.isAvailable())
-			TimeUnit.MILLISECONDS.sleep(100); // TO DELETE (IT'S FOR LONG VOLUME CREATION)
 	}
 
 	public void destroy() throws Exception {
+		end = true;
+
+		for (K8sExecutor job : jobs) { job.clean(); } // dev
 		volume.deletePVC();
 		volume.deletePV();
 		volume = null;
@@ -60,21 +63,61 @@ public class K8sManager {
 
 		api.createNamespace(ns).execute();
 	}
-
+	
 	public void testJob() throws Exception {
-		K8sExecutor executor = new K8sExecutor("ultra-pro", Arrays.asList("sh", "-c", "echo migouel $RANDOM"), "busybox", volume);
-		
-		executor.start();
-		
-		K8sStatus status = K8sStatus.PENDING;
-		while (status != K8sStatus.FINISHED) {
-			status = executor.getStatus();
-			System.out.println(executor.getStatus().toString());
-			TimeUnit.MILLISECONDS.sleep(500);
-		}
-		executor.getOutput();
-		executor.clean();
+		K8sExecutor executor = new K8sExecutor("j-" + UUID.randomUUID().toString().substring(0, 8), Arrays.asList("sh", "-c", "echo migouel $RANDOM"), "busybox", volume);
+		// jobs.add(executor);
+		submitter(executor);
 	}
-	// public void resubmit(K8sExecutor job)
+
+	/**
+	 * Create a thread instance that will launch job when ressources are available (volumes)
+	 * The end variable is used to know if a thread instance has already been launched.
+	 * @param exec
+	 */
+	private void submitter(K8sExecutor exec) {
+		if (end == null) {
+			end = false;
+			new Thread(this.new K8sRunner()).start();
+		}
+		synchronized (this) {
+			jobs.add(exec);
+		}
+	}
+
+	class K8sRunner implements Runnable {
+		private Boolean ready = false;
+
+		@Override
+		public void run() {
+			try {
+				loop();
+			} catch (Exception e) {
+				System.err.println("something bad happened during the k8sRunner " + e.getMessage()	);
+			}
+		}
+
+		private void loop() throws Exception {
+			while (ready == false) {
+				checker();
+				TimeUnit.MILLISECONDS.sleep(600);
+			}
+			while (end == false) {
+				synchronized (this) {
+					for (K8sExecutor exec : jobs) {
+						if (exec.getStatus() == K8sStatus.UNSUBMITED) {
+							exec.start();
+						}
+					}
+				}
+				TimeUnit.MILLISECONDS.sleep(600);
+			}
+		}
+
+		private synchronized void checker() {
+			if (!ready && volume.isAvailable())
+				ready = true;
+		}
+	}
 }
  

@@ -87,7 +87,8 @@ public class K8sVolume {
 				return true;
 			return false;
 		} catch (Exception e) {
-			System.err.println("failed to check is the volume (pv and pvc) were available");
+			System.err.println("failed to check is the volume (pv and pvc) were available ");
+			e.printStackTrace();
 			return false;
 		}
 	}

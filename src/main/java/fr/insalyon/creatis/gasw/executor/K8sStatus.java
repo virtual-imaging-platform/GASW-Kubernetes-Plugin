@@ -5,5 +5,6 @@ public enum K8sStatus {
 	FINISHED,
 	RUNNING,
 	FAILED,
+	UNSUBMITED,
 }
 
