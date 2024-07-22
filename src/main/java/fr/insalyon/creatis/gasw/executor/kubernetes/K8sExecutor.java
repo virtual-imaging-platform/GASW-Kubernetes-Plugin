@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import fr.insalyon.creatis.gasw.executor.K8sStatus;
@@ -27,18 +28,18 @@ import io.kubernetes.client.openapi.models.V1VolumeMount;
  */
 public class K8sExecutor {
 
-	private final K8sConfiguration conf;
+	private final K8sConfiguration 	conf;
 
-	private String jobId;
-	private String dockerImage;
-	private List<String> command;
-	private K8sVolume volume;
-	private V1Job job;
-	private boolean submited = false;
+	private String 					jobId;
+	private String 					dockerImage;
+	private List<String> 			command;
+	private K8sVolume 				volume;
+	private V1Job 					job;
+	private boolean 				submited = false;
 
-	public K8sExecutor(String jobId, List<String> command, String dockerImage, K8sVolume volume) {
+	public K8sExecutor(List<String> command, String dockerImage, K8sVolume volume) {
 		conf = K8sConfiguration.getInstance();
-		this.jobId = jobId;
+		this.jobId = UUID.randomUUID().toString();
 		this.command = command;
 		this.dockerImage = dockerImage;
 		this.volume = volume;
@@ -153,6 +154,14 @@ public class K8sExecutor {
 	public void clean() throws Exception {
 		if (job != null && getStatus() == K8sStatus.FINISHED)
 			kill();
+	}
+
+
+	/**
+	 * Return a configuration copy job of the actual job (unstarted)
+	 */
+	public K8sExecutor clone() {
+		return new K8sExecutor(command, dockerImage, volume);
 	}
 
 	/**

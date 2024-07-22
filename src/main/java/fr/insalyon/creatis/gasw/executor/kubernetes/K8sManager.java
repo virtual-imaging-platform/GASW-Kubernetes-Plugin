@@ -3,7 +3,6 @@ package fr.insalyon.creatis.gasw.executor.kubernetes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import fr.insalyon.creatis.gasw.executor.K8sStatus;
@@ -65,9 +64,11 @@ public class K8sManager {
 	}
 	
 	public void testJob() throws Exception {
-		K8sExecutor executor = new K8sExecutor("j-" + UUID.randomUUID().toString().substring(0, 8), Arrays.asList("sh", "-c", "echo migouel $RANDOM"), "busybox", volume);
+		K8sExecutor executor = new K8sExecutor(Arrays.asList("sh", "-c", "echo migouel $RANDOM"), "busybox", volume);
 		// jobs.add(executor);
+		K8sExecutor executorbis = executor.clone();
 		submitter(executor);
+		submitter(executorbis);
 	}
 
 	/**
