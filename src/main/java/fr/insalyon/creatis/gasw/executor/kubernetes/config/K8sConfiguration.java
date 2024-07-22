@@ -1,9 +1,12 @@
 package fr.insalyon.creatis.gasw.executor.kubernetes.config;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
 import org.json.JSONObject;
+
+import fr.insalyon.creatis.gasw.GaswException;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.Configuration;
 import io.kubernetes.client.openapi.apis.BatchV1Api;
@@ -54,12 +57,12 @@ public class K8sConfiguration {
 		return instance;
 	}
 
-	public void init(String configurationFile) {
+	public void init(String configurationFile) throws GaswException {
 		loadConfiguration(configurationFile);
 		createLocalClient();
 	}
 
-	private void loadConfiguration(String path) {
+	private void loadConfiguration(String path) throws GaswException {
 		try {
 			String content = Files.readString(Paths.get(path));
 			Map<String, Object> map = new JSONObject(content).toMap();
@@ -70,8 +73,9 @@ public class K8sConfiguration {
 			nfsAddress = map.get("nfs_address").toString();
 			nfsPath = map.get("nfs_path").toString();
 
-		} catch (Exception e){
-			System.err.println("Impossible de lire le fichier de configuration ! : " + e.getMessage());
+		} catch (IOException e) {
+			logger.error(e.getMessage());
+			throw new GaswException("Client creation failed");
 		}
 	}
 	
@@ -80,17 +84,18 @@ public class K8sConfiguration {
 		k8sBatchApi =  new BatchV1Api(client);
 		k8sStorageApi = new StorageV1Api(client);
 	}
-
+	
 	/**
 	 * To use when use .kube local config, useful for debug and develop
 	 */
-	private void createLocalClient() {
+	private void createLocalClient() throws GaswException {
 		try {
 			ApiClient client = Config.fromConfig("/home/billon/.kube/config");
 			Configuration.setDefaultApiClient(client);
 			defineApis(client);
-		} catch (Exception e) {
-			System.err.println("Something bad happened at local client creation : " + e.getMessage());
+		} catch (IOException e) {
+			logger.error(e.getMessage());
+			throw new GaswException("Client creation failed");
 		}
 	}
 

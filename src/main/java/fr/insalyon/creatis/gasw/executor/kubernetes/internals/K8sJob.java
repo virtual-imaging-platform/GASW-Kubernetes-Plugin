@@ -232,16 +232,14 @@ public class K8sJob {
 	}
 
 	public File getStdout() {
-		File f = new File(getLogPath("stdout"));
-		return f;
+		return new File(getLogPath("stdout"));
 	}
 
 	public File getStderr() {
-		File f = new File (getLogPath("stderr"));
-		return f;
+		return new File(getLogPath("stderr"));
 	}
 
-	public Map<String, String> getOutput() {
+	public Map<String, String> getOutputs() {
 		Map<String, String> outputs = new HashMap<String, String>();
 
 		try {

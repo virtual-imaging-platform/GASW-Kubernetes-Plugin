@@ -45,7 +45,7 @@ public class K8sSubmit extends GaswSubmit {
         return fileName;
     }
 
-	private void wrappedSubmit(String jobID) {
+	private void wrappedSubmit(String jobID) throws GaswException{
 		try {
 			// GAWS DAO
 			JobDAO jobDAO = DAOFactory.getDAOFactory().getJobDAO();
@@ -59,8 +59,8 @@ public class K8sSubmit extends GaswSubmit {
 			manager.submitter(cmd, "busybox");
 
 		} catch (Exception e) {
-			e.printStackTrace();
-			System.err.println("erreur pendant le wrappedsubmit");
+			logger.error(e.getMessage());
+			throw new GaswException("Failed to submit the job (wrapped command)");
 		}
 	}
 
