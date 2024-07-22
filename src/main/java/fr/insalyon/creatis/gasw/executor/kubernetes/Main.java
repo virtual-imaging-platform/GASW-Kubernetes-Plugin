@@ -2,6 +2,9 @@ package fr.insalyon.creatis.gasw.executor.kubernetes;
 
 import java.util.concurrent.TimeUnit;
 
+import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
+import fr.insalyon.creatis.gasw.executor.kubernetes.internals.K8sManager;
+
 /**
  * Main
  */

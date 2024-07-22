@@ -1,11 +1,12 @@
-package fr.insalyon.creatis.gasw.executor.kubernetes;
+package fr.insalyon.creatis.gasw.executor.kubernetes.internals;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import fr.insalyon.creatis.gasw.executor.K8sStatus;
+import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1NamespaceList;
@@ -14,31 +15,43 @@ import io.kubernetes.client.openapi.models.V1ObjectMeta;
 public class K8sManager {
 	private String						workflowName;
 	private K8sVolume 					volume;
-	private volatile List<K8sExecutor> 	jobs;
+	private volatile ArrayList<K8sJob> 	jobs;
 	private Boolean						end;
 
 	public K8sManager(String workflowName) {
 		this.workflowName = workflowName;
-		this.jobs = new ArrayList<K8sExecutor>();
+		this.jobs = new ArrayList<K8sJob>();
 	}
 
-	public void init() throws Exception {
+	public void init() {
 		K8sConfiguration conf = K8sConfiguration.getInstance();
 
-		checkNamespace();
+		try {
+			checkNamespace();
+			
+			volume = new K8sVolume(conf, workflowName);
+			volume.createPV();
+			volume.createPVC();
+		} catch (Exception e) {
+			System.err.println("Failed to init the manager ");
+			e.printStackTrace();
+		}
 
-		volume = new K8sVolume(conf, workflowName);
-		volume.createPV();
-		volume.createPVC();
 	}
 
-	public void destroy() throws Exception {
+	public void destroy() {
 		end = true;
 
-		for (K8sExecutor job : jobs) { job.clean(); } // dev
-		volume.deletePVC();
-		volume.deletePV();
-		volume = null;
+		try {
+			volume.deletePVC();
+			volume.deletePV();
+			
+			/* hard cleaning not prod */
+			for (K8sJob job : jobs) { job.clean(); }
+			volume = null;
+		} catch (Exception e) {
+			System.err.println("Failed to destroy the manager");
+		}
 	}
 
 	/*
@@ -64,9 +77,9 @@ public class K8sManager {
 	}
 	
 	public void testJob() throws Exception {
-		K8sExecutor executor = new K8sExecutor(Arrays.asList("sh", "-c", "echo migouel $RANDOM"), "busybox", volume);
+		K8sJob executor = new K8sJob(Arrays.asList("sh", "-c", "echo migouel $RANDOM"), "busybox", volume);
 		// jobs.add(executor);
-		K8sExecutor executorbis = executor.clone();
+		K8sJob executorbis = executor.clone();
 		submitter(executor);
 		submitter(executorbis);
 	}
@@ -76,7 +89,7 @@ public class K8sManager {
 	 * The end variable is used to know if a thread instance has already been launched.
 	 * @param exec
 	 */
-	private void submitter(K8sExecutor exec) {
+	private void submitter(K8sJob exec) {
 		if (end == null) {
 			end = false;
 			new Thread(this.new K8sRunner()).start();
@@ -84,6 +97,11 @@ public class K8sManager {
 		synchronized (this) {
 			jobs.add(exec);
 		}
+	}
+
+	public void submitter(List<String> cmd, String dockerImage) {
+		K8sJob exec = new K8sJob(cmd, dockerImage, volume);
+		submitter(exec);
 	}
 
 	class K8sRunner implements Runnable {
@@ -105,7 +123,7 @@ public class K8sManager {
 			}
 			while (end == false) {
 				synchronized (this) {
-					for (K8sExecutor exec : jobs) {
+					for (K8sJob exec : jobs) {
 						if (exec.getStatus() == K8sStatus.UNSUBMITED) {
 							exec.start();
 						}
@@ -120,5 +138,15 @@ public class K8sManager {
 				ready = true;
 		}
 	}
+
+	public ArrayList<K8sJob> getUnfinishedJobs() { 
+		ArrayList<K8sJob> copy = new ArrayList<K8sJob>(jobs);
+
+		Iterator<K8sJob> it = copy.iterator();
+		while (it.hasNext()) {
+   			if (it.next().isTerminated())
+   				it.remove();
+		}
+		return copy; 
+	}
 }
- 

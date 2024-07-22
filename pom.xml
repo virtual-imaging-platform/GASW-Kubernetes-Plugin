@@ -13,8 +13,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
-
-        <!-- <gasw-version>3.10.0</gasw-version> -->
+        <gasw-version>3.10.0</gasw-version>
     </properties>
 
     <licenses>
@@ -74,15 +73,15 @@
     		<artifactId>json</artifactId>
     		<version>20240303</version>
 		</dependency>
-		<!-- <dependency>
+		<dependency>
             <groupId>fr.insalyon.creatis</groupId>
             <artifactId>gasw</artifactId>
             <version>${gasw-version}</version>
             <scope>provided</scope>
-        </dependency> -->
+        </dependency>
     </dependencies>
 
-    <!-- <repositories>
+    <repositories>
         <repository>
             <id>creatis</id>
             <name>Creatis Insa Lyon repository [creatis]</name>
@@ -90,7 +89,7 @@
         </repository>
     </repositories>
 
-    <distributionManagement>
+    <!-- <distributionManagement>
         <repository>
             <id>creatis-releases</id>
             <name>Internal Releases</name>

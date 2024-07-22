@@ -1,4 +1,4 @@
-package fr.insalyon.creatis.gasw.executor.kubernetes;
+package fr.insalyon.creatis.gasw.executor.kubernetes.config;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -12,12 +12,15 @@ import io.kubernetes.client.openapi.apis.StorageV1Api;
 import io.kubernetes.client.util.ClientBuilder;
 import io.kubernetes.client.util.Config;
 import io.kubernetes.client.util.credentials.AccessTokenAuthentication;
+import org.apache.log4j.Logger;
+
 
 /**
  * K8sConfiguration
  */
 public class K8sConfiguration {
 
+	private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
 	private static K8sConfiguration instance;
 
 	// K8s objects
@@ -51,12 +54,12 @@ public class K8sConfiguration {
 		return instance;
 	}
 
-	void init(String configurationFile) {
+	public void init(String configurationFile) {
 		loadConfiguration(configurationFile);
 		createLocalClient();
 	}
 
-	void loadConfiguration(String path) {
+	private void loadConfiguration(String path) {
 		try {
 			String content = Files.readString(Paths.get(path));
 			Map<String, Object> map = new JSONObject(content).toMap();
@@ -81,7 +84,7 @@ public class K8sConfiguration {
 	/**
 	 * To use when use .kube local config, useful for debug and develop
 	 */
-	public void createLocalClient() {
+	private void createLocalClient() {
 		try {
 			ApiClient client = Config.fromConfig("/home/billon/.kube/config");
 			Configuration.setDefaultApiClient(client);
@@ -89,14 +92,13 @@ public class K8sConfiguration {
 		} catch (Exception e) {
 			System.err.println("Something bad happened at local client creation : " + e.getMessage());
 		}
-
 	}
 
 	/**
 	 * To use in production mode with generated K8s credentials
 	 * @implNote You should have an admin access to the cluster otherwise bad things could happen.
 	 */
-	public void createRemoteClient() {
+	private void createRemoteClient() {
 		try {
 			ApiClient client = new ClientBuilder()
 				.setBasePath(k8sAddress)

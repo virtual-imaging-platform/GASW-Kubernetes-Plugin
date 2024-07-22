@@ -1,8 +1,10 @@
-package fr.insalyon.creatis.gasw.executor.kubernetes;
+package fr.insalyon.creatis.gasw.executor.kubernetes.internals;
 
 import java.util.Arrays;
 import java.util.Map;
 
+import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
+import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConstants;
 import io.kubernetes.client.custom.Quantity;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1NFSVolumeSource;

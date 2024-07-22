@@ -1,4 +1,4 @@
-package fr.insalyon.creatis.gasw.executor;
+package fr.insalyon.creatis.gasw.executor.kubernetes.internals;
 
 public enum K8sStatus {
 	PENDING,
