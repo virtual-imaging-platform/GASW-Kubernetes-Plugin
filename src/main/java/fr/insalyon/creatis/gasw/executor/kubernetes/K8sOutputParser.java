@@ -9,22 +9,33 @@ import fr.insalyon.creatis.gasw.GaswException;
 import fr.insalyon.creatis.gasw.GaswExitCode;
 import fr.insalyon.creatis.gasw.GaswOutput;
 import fr.insalyon.creatis.gasw.execution.GaswOutputParser;
+import fr.insalyon.creatis.gasw.executor.kubernetes.internals.K8sJob;
+import fr.insalyon.creatis.gasw.executor.kubernetes.internals.K8sManager;
 
 public class K8sOutputParser extends GaswOutputParser {
 
     private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
     private File stdOut;
     private File stdErr;
+	private K8sManager manager;
+	private String jobID;
 
-    public K8sOutputParser(String jobID) {
+    public K8sOutputParser(String jobID, K8sManager manager) {
         super(jobID);
+		this.manager = manager;
+		this.jobID = jobID;
     }
 
     @Override
     public GaswOutput getGaswOutput() throws GaswException {
+        // stdOut = getAppStdFile(GaswConstants.OUT_EXT, GaswConstants.OUT_ROOT);
+        // stdErr = getAppStdFile(GaswConstants.ERR_EXT, GaswConstants.ERR_ROOT);
+		K8sJob job = manager.getJob(jobID);
+		if (job == null)
+			throw new GaswException("Job do not exist ! (output parser)");
 
-        stdOut = getAppStdFile(GaswConstants.OUT_EXT, GaswConstants.OUT_ROOT);
-        stdErr = getAppStdFile(GaswConstants.ERR_EXT, GaswConstants.ERR_ROOT);
+		stdOut = job.getStdout();
+		stdErr = job.getStderr();
 
         moveProvenanceFile(".");
 
@@ -50,7 +61,7 @@ public class K8sOutputParser extends GaswOutputParser {
                 break;
         }
 
-        return new GaswOutput(job.getId(), gaswExitCode, "", uploadedResults,
+        return new GaswOutput(jobID, gaswExitCode, "", uploadedResults,
                 appStdOut, appStdErr, stdOut, stdErr);
     }
 

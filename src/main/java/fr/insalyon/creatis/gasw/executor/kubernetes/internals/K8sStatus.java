@@ -7,4 +7,3 @@ public enum K8sStatus {
 	FAILED,
 	UNSUBMITED,
 }
-

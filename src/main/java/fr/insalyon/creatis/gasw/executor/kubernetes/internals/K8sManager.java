@@ -149,4 +149,12 @@ public class K8sManager {
 		}
 		return copy; 
 	}
+
+	public K8sJob getJob(String jobId) {
+		for (K8sJob j : jobs) {
+			if (j.getJobID() == jobId)
+				return j;
+		}
+		return null;
+	} 
 }

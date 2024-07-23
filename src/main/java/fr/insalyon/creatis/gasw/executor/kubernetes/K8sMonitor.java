@@ -1,6 +1,5 @@
 package fr.insalyon.creatis.gasw.executor.kubernetes;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Date;
 
@@ -71,7 +70,7 @@ public class K8sMonitor extends GaswMonitor {
 						job.setStatus(GaswStatus.ERROR);
 					}
 					jobDAO.update(job);
-					new K8sOutputParser(job.getId()).start();
+					new K8sOutputParser(job.getId(), manager).start();
 				}
 
 				Thread.sleep(GaswConfiguration.getInstance().getDefaultSleeptime());
