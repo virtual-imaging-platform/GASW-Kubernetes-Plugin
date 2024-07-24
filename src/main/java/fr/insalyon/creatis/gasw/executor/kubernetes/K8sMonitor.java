@@ -14,7 +14,6 @@ import fr.insalyon.creatis.gasw.execution.GaswStatus;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConstants;
 import fr.insalyon.creatis.gasw.executor.kubernetes.internals.K8sJob;
 import fr.insalyon.creatis.gasw.executor.kubernetes.internals.K8sManager;
-import fr.insalyon.creatis.gasw.executor.kubernetes.internals.K8sStatus;
 
 public class K8sMonitor extends GaswMonitor {
 
@@ -41,9 +40,8 @@ public class K8sMonitor extends GaswMonitor {
 
 	private void statusChecker() {
 		ArrayList<K8sJob> jobs = manager.getUnfinishedJobs();
-
 		for (K8sJob j : jobs) {
-			if (j.getStatus() == K8sStatus.FINISHED || j.getStatus() == K8sStatus.FAILED) {
+			if (j.getStatus() == GaswStatus.COMPLETED || j.getStatus() == GaswStatus.ERROR) {
 				Integer exitCode = j.getExitCode();
 				String jobId = j.getJobID();
 				j.setTerminated();

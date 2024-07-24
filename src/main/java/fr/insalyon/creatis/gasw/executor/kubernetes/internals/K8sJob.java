@@ -12,10 +12,8 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.common.util.impl.Log_.logger;
 
-import com.google.protobuf.Api;
-
+import fr.insalyon.creatis.gasw.execution.GaswStatus;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConstants;
 import io.kubernetes.client.openapi.ApiException;
@@ -165,7 +163,7 @@ public class K8sJob {
 	 * @throws ApiException
 	 */
 	public void clean() throws ApiException {
-		if (job != null && getStatus() == K8sStatus.FINISHED)
+		if (job != null && getStatus() == GaswStatus.COMPLETED)
 			kill();
 	}
 
@@ -182,34 +180,34 @@ public class K8sJob {
 	 */
 	public void waitForCompletion() throws InterruptedException {
 		if (job != null) {
-			while (getStatus() != K8sStatus.FINISHED)
+			while (getStatus() != GaswStatus.COMPLETED)
 				TimeUnit.MILLISECONDS.sleep(200);
 		}
 	}
 
-	public K8sStatus getStatus() {
+	public GaswStatus getStatus() {
 		BatchV1Api api = conf.getK8sBatchApi();
 
 		if (job != null) {
 			if (submited == false)
-				return K8sStatus.UNSUBMITED;
+				return GaswStatus.NOT_SUBMITTED;
 			try {
 				V1Job updatedJob = api.readNamespacedJob(job.getMetadata().getName(), conf.getK8sNamespace()).execute();
 				V1JobStatus status = updatedJob.getStatus();
 				if (status.getFailed() != null && status.getFailed() > 0)
-					return K8sStatus.FAILED;
+					return GaswStatus.ERROR;
 				else if (status.getActive() != null && status.getActive() > 0)
-					return K8sStatus.RUNNING;
+					return GaswStatus.RUNNING;
 				else if (status.getSucceeded() != null && status.getSucceeded() > 0)
-					return K8sStatus.FINISHED;
+					return GaswStatus.COMPLETED;
 				else
-					return K8sStatus.PENDING;
+					return GaswStatus.QUEUED;
 			} catch (ApiException e) {
 				logger.trace("Impossible de récuperer l'état du job" + e.getStackTrace());
-				return K8sStatus.PENDING;
+				return GaswStatus.UNDEFINED;
 			}
 		}
-		return K8sStatus.PENDING;
+		return GaswStatus.UNDEFINED;
 	}
 
 

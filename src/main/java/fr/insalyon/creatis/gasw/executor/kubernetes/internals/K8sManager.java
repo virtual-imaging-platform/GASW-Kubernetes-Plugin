@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
+import fr.insalyon.creatis.gasw.execution.GaswStatus;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
@@ -129,7 +130,7 @@ public class K8sManager {
 			while (end == false) {
 				synchronized (this) {
 					for (K8sJob exec : jobs) {
-						if (exec.getStatus() == K8sStatus.UNSUBMITED) {
+						if (exec.getStatus() == GaswStatus.NOT_SUBMITTED) {
 							exec.start();
 						}
 					}
