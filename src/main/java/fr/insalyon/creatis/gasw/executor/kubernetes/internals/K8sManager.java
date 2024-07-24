@@ -6,13 +6,17 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.log4j.Logger;
+
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
+import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1NamespaceList;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 
 public class K8sManager {
+	private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
 	private String						workflowName;
 	private K8sVolume 					volume;
 	private volatile ArrayList<K8sJob> 	jobs;
@@ -33,8 +37,8 @@ public class K8sManager {
 			volume.createPV();
 			volume.createPVC();
 		} catch (Exception e) {
-			System.err.println("Failed to init the manager ");
-			e.printStackTrace();
+			logger.error("Failed to init the manager");
+			logger.error(e.getStackTrace());
 		}
 
 	}
@@ -49,8 +53,8 @@ public class K8sManager {
 			/* hard cleaning not prod */
 			for (K8sJob job : jobs) { job.clean(); }
 			volume = null;
-		} catch (Exception e) {
-			System.err.println("Failed to destroy the manager");
+		} catch (ApiException e) {
+			logger.error("Failed to destroy the manager");
 		}
 	}
 
@@ -58,7 +62,7 @@ public class K8sManager {
 	 * Check if the k8s cluster already have the namespace
 	 * if it isn't here, then it is created
 	 */
-	public void checkNamespace() throws Exception {
+	public void checkNamespace() throws ApiException {
 		CoreV1Api api = K8sConfiguration.getInstance().getK8sCoreApi();
 		V1NamespaceList list = api.listNamespace().execute();
 		String targetName = K8sConfiguration.getInstance().getK8sNamespace();
@@ -76,7 +80,7 @@ public class K8sManager {
 		api.createNamespace(ns).execute();
 	}
 	
-	public void testJob() throws Exception {
+	public void testJob() throws ApiException {
 		K8sJob executor = new K8sJob(Arrays.asList("sh", "-c", "echo migouel $RANDOM"), "busybox", volume);
 		// jobs.add(executor);
 		K8sJob executorbis = executor.clone();
@@ -112,11 +116,12 @@ public class K8sManager {
 			try {
 				loop();
 			} catch (Exception e) {
-				System.err.println("something bad happened during the k8sRunner " + e.getMessage()	);
+				logger.error("Something bad happened during the K8sRunner");
+				logger.error(e.getStackTrace());
 			}
 		}
 
-		private void loop() throws Exception {
+		private void loop() throws ApiException, InterruptedException {
 			while (ready == false) {
 				checker();
 				TimeUnit.MILLISECONDS.sleep(600);

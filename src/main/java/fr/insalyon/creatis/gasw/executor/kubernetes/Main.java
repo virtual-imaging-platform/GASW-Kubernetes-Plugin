@@ -22,7 +22,7 @@ public class Main {
 			manager.destroy();
 
 		} catch (Exception e) {
-			System.err.println("system error : " + e.getMessage());
+			System.err.println("system error : " + e.getStackTrace());
 		}
 
 	}

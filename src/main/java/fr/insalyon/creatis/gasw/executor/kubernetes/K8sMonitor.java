@@ -54,7 +54,6 @@ public class K8sMonitor extends GaswMonitor {
 
 	@Override
 	public void run() {
-
 		while (!stop) {
 			statusChecker();
 			try {

@@ -6,16 +6,19 @@ import java.util.Date;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.hibernate.exception.DataException;
 
 import fr.insalyon.creatis.gasw.GaswConstants;
 import fr.insalyon.creatis.gasw.GaswException;
 import fr.insalyon.creatis.gasw.GaswInput;
 import fr.insalyon.creatis.gasw.bean.Job;
+import fr.insalyon.creatis.gasw.dao.DAOException;
 import fr.insalyon.creatis.gasw.dao.DAOFactory;
 import fr.insalyon.creatis.gasw.dao.JobDAO;
 import fr.insalyon.creatis.gasw.execution.GaswStatus;
 import fr.insalyon.creatis.gasw.execution.GaswSubmit;
 import fr.insalyon.creatis.gasw.executor.kubernetes.internals.K8sManager;
+import io.kubernetes.client.openapi.ApiException;
 
 public class K8sSubmit extends GaswSubmit {
 
@@ -45,7 +48,7 @@ public class K8sSubmit extends GaswSubmit {
         return fileName;
     }
 
-	private void wrappedSubmit(String jobID) throws GaswException{
+	private void wrappedSubmit(String jobID) throws GaswException {
 		try {
 			// GAWS DAO
 			JobDAO jobDAO = DAOFactory.getDAOFactory().getJobDAO();
@@ -58,8 +61,8 @@ public class K8sSubmit extends GaswSubmit {
 			List<String> cmd = Arrays.asList("sh", "-c", GaswConstants.SCRIPT_ROOT + "/" + scriptName);
 			manager.submitter(cmd, "busybox");
 
-		} catch (Exception e) {
-			logger.error(e.getMessage());
+		} catch (DAOException e) {
+			logger.error(e.getStackTrace());
 			throw new GaswException("Failed to submit the job (wrapped command)");
 		}
 	}

@@ -3,9 +3,14 @@ package fr.insalyon.creatis.gasw.executor.kubernetes.internals;
 import java.util.Arrays;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+
+import com.google.protobuf.Api;
+
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConstants;
 import io.kubernetes.client.custom.Quantity;
+import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1NFSVolumeSource;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
@@ -19,6 +24,7 @@ import io.kubernetes.client.openapi.models.V1VolumeResourceRequirements;
  * K8sVolume
  */
 public class K8sVolume {
+	private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
 	private V1PersistentVolume 		pv;
 	private V1PersistentVolumeClaim pvc;
 	private String 					name;
@@ -35,7 +41,7 @@ public class K8sVolume {
 	// LA REMPLACER PAR LE NOM DU WORKFLOW
 	public String getSubMountPath() { return conf.getNFSPath() + "test/"; } 
 
-	public void createPV () throws Exception {
+	public void createPV () throws ApiException {
 		pv = new V1PersistentVolume()
             .metadata(new V1ObjectMeta().name(name))
             .spec(new V1PersistentVolumeSpec()
@@ -61,13 +67,13 @@ public class K8sVolume {
 		conf.getK8sCoreApi().createNamespacedPersistentVolumeClaim(conf.getK8sNamespace(), pvc).execute();
 	}
 
-	public void deletePVC() throws Exception {
+	public void deletePVC() throws ApiException {
 		CoreV1Api api = conf.getK8sCoreApi();
 
 		api.deleteNamespacedPersistentVolumeClaim(getClaimName(), conf.getK8sNamespace()).execute();
 	}
 
-	public void deletePV() throws Exception {
+	public void deletePV() throws ApiException {
 		CoreV1Api api = conf.getK8sCoreApi();
 
 		api.deletePersistentVolume(name).execute();
@@ -88,9 +94,9 @@ public class K8sVolume {
 			if (requestPv.getStatus().getPhase().equals("Bound") && requestPvc.getStatus().getPhase().equals("Bound"))
 				return true;
 			return false;
-		} catch (Exception e) {
-			System.err.println("failed to check is the volume (pv and pvc) were available ");
-			e.printStackTrace();
+		} catch (ApiException e) {
+			logger.error("Failed to check if the volume PV and PVC were available !");
+			logger.error(e.getStackTrace());
 			return false;
 		}
 	}

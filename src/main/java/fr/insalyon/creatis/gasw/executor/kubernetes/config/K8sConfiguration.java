@@ -8,6 +8,7 @@ import org.json.JSONObject;
 
 import fr.insalyon.creatis.gasw.GaswException;
 import io.kubernetes.client.openapi.ApiClient;
+import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.Configuration;
 import io.kubernetes.client.openapi.apis.BatchV1Api;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
@@ -74,7 +75,7 @@ public class K8sConfiguration {
 			nfsPath = map.get("nfs_path").toString();
 
 		} catch (IOException e) {
-			logger.error(e.getMessage());
+			logger.error(e.getStackTrace());
 			throw new GaswException("Client creation failed");
 		}
 	}
@@ -94,7 +95,7 @@ public class K8sConfiguration {
 			Configuration.setDefaultApiClient(client);
 			defineApis(client);
 		} catch (IOException e) {
-			logger.error(e.getMessage());
+			logger.error(e.getStackTrace());
 			throw new GaswException("Client creation failed");
 		}
 	}
@@ -104,17 +105,13 @@ public class K8sConfiguration {
 	 * @implNote You should have an admin access to the cluster otherwise bad things could happen.
 	 */
 	private void createRemoteClient() {
-		try {
-			ApiClient client = new ClientBuilder()
-				.setBasePath(k8sAddress)
-				.setVerifyingSsl(false) // may need to change in production !
-				.setAuthentication(new AccessTokenAuthentication(k8sToken))
-				.setCertificateAuthority(null) // may need to change in production !
-				.build();
-			defineApis(client);
-		} catch (Exception e) {
-			System.err.println("Something bad happened at client creation : " + e.getMessage());
-		}
+		ApiClient client = new ClientBuilder()
+			.setBasePath(k8sAddress)
+			.setVerifyingSsl(false) // may need to change in production !
+			.setAuthentication(new AccessTokenAuthentication(k8sToken))
+			.setCertificateAuthority(null) // may need to change in production !
+			.build();
+		defineApis(client);
 	}
 
 }

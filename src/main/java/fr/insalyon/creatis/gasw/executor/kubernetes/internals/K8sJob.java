@@ -11,8 +11,14 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.log4j.Logger;
+import org.hibernate.annotations.common.util.impl.Log_.logger;
+
+import com.google.protobuf.Api;
+
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConstants;
+import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.BatchV1Api;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Container;
@@ -34,7 +40,7 @@ import io.kubernetes.client.openapi.models.V1VolumeMount;
  * K8sExecutor
  */
 public class K8sJob {
-
+	private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
 	private final K8sConfiguration 	conf;
 
 	private String 					jobId;
@@ -128,12 +134,12 @@ public class K8sJob {
 		return volume.getSubMountPath() + K8sConstants.subLogPath + jobId + "." + extension;
 	}
 
-	public void start() throws Exception {
+	public void start() throws ApiException {
 		BatchV1Api api = conf.getK8sBatchApi();
 		System.err.println("statut du volume " + volume.isAvailable());
 
 		if (job == null || !volume.isAvailable()) {
-			System.out.println("Impossible to start job, isn't configure or volume not ready !");
+			logger.error("Impossible to start job, isn't configured or volume not ready !");
 		} else {
 			api.createNamespacedJob(conf.getK8sNamespace(), job).execute();
 			submited = true;
@@ -142,13 +148,12 @@ public class K8sJob {
 
 	/**
 	 * Kill method stop running pods and erase job for k8s api memory.
-	 * @throws Exception
+	 * @throws ApiException
 	 */
-	public void kill() throws Exception {
+	public void kill() throws ApiException {
 		BatchV1Api api = conf.getK8sBatchApi();
 
 		if (job != null) {
-			System.err.println("je delete le job");
 			api.deleteNamespacedJob(job.getMetadata().getName(), conf.getK8sNamespace())
 				.propagationPolicy("Foreground").execute();
 			this.job = null;
@@ -157,9 +162,9 @@ public class K8sJob {
 
 	/**
 	 * This function do the same as kill but check for the status to be terminated.
-	 * @throws Exception
+	 * @throws ApiException
 	 */
-	public void clean() throws Exception {
+	public void clean() throws ApiException {
 		if (job != null && getStatus() == K8sStatus.FINISHED)
 			kill();
 	}
@@ -173,9 +178,9 @@ public class K8sJob {
 
 	/**
 	 * Develop function purpose (blocking)
-	 * @throws Exception
+	 * @throws InterruptedException
 	 */
-	public void waitForCompletion() throws Exception {
+	public void waitForCompletion() throws InterruptedException {
 		if (job != null) {
 			while (getStatus() != K8sStatus.FINISHED)
 				TimeUnit.MILLISECONDS.sleep(200);
@@ -199,8 +204,8 @@ public class K8sJob {
 					return K8sStatus.FINISHED;
 				else
 					return K8sStatus.PENDING;
-			} catch (Exception e) {
-				System.err.println("impossible de récuperer l'état du job : " + e.getMessage());
+			} catch (ApiException e) {
+				logger.trace("Impossible de récuperer l'état du job" + e.getStackTrace());
 				return K8sStatus.PENDING;
 			}
 		}
@@ -247,14 +252,21 @@ public class K8sJob {
 			outputs.put("stderr", Files.readString(Paths.get(getLogPath("stderr"))));
 			return (outputs);
 		} catch (Exception e) {
-			System.err.println("failed to read outputs files");
-			e.printStackTrace();
+			logger.error("Failed to read outputs files");
+			logger.error(e.getStackTrace());
 			return (outputs);
-
 		}
 	}
 
-	public void setTerminated() { terminated = true; }
-	public boolean isTerminated() { return terminated;}
-	public String getJobID() { return jobId; }
+	public void setTerminated() { 
+		terminated = true; 
+	}
+
+	public boolean isTerminated() { 
+		return terminated;
+	}
+
+	public String getJobID() { 
+		return jobId; 
+	}
 }
