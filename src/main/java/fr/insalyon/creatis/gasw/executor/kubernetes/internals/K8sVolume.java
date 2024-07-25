@@ -5,8 +5,6 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
-import com.google.protobuf.Api;
-
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConstants;
 import io.kubernetes.client.custom.Quantity;

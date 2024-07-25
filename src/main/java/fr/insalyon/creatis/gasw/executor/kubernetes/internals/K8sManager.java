@@ -7,7 +7,10 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
+import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
+import fr.insalyon.creatis.gasw.GaswException;
 import fr.insalyon.creatis.gasw.execution.GaswStatus;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
 import io.kubernetes.client.openapi.ApiException;
@@ -111,21 +114,31 @@ public class K8sManager {
 
 	class K8sRunner implements Runnable {
 		private Boolean ready = false;
+		private DateTime startedTime;
 
 		@Override
 		public void run() {
 			try {
+				startedTime = DateTime.now();
 				loop();
+			} catch (GaswException e) {
+				logger.error(e.getMessage());
 			} catch (Exception e) {
 				logger.error("Something bad happened during the K8sRunner");
 				logger.error(e.getStackTrace());
 			}
 		}
 
-		private void loop() throws ApiException, InterruptedException {
+		private void loop() throws ApiException, InterruptedException, GaswException {
 			while (ready == false) {
-				checker();
-				TimeUnit.MILLISECONDS.sleep(600);
+				Duration diff = new Duration(startedTime, DateTime.now());
+				
+				if (diff.getStandardSeconds() > 120)
+					throw new GaswException("Volume wasn't eady in 2 minutes, aborting !");
+				else {
+					checker();
+					TimeUnit.MILLISECONDS.sleep(600);
+				}
 			}
 			while (end == false) {
 				synchronized (this) {
