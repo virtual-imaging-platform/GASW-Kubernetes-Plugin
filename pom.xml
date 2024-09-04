@@ -37,8 +37,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-							<mainClass>fr.insalyon.creatis.gasw.executor.kubernetes.Main</mainClass>
-                            <!-- <mainClass>fr.insalyon.creatis.gasw.Gasw</mainClass> -->
+                            <mainClass>fr.insalyon.creatis.gasw.Gasw</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
@@ -67,6 +66,20 @@
             <groupId>io.kubernetes</groupId>
             <artifactId>client-java</artifactId>
             <version>21.0.0</version>
+			<exclusions>
+				<exclusion>
+					<groupId>com.fasterxml.jackson.core</groupId>
+					<artifactId>jackson-databind</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.fasterxml.jackson.core</groupId>
+					<artifactId>jackson-core</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.google.code.json</groupId>
+					<artifactId>gson</artifactId>
+				</exclusion>
+			</exclusions>
         </dependency>
 		<dependency>
     		<groupId>org.json</groupId>
@@ -101,7 +114,5 @@
             <name>Internal Snapshots</name>
             <url>https://vip.creatis.insa-lyon.fr:9007/nexus/repository/snapshots</url>
         </snapshotRepository>
-
     </distributionManagement> -->
-
 </project>

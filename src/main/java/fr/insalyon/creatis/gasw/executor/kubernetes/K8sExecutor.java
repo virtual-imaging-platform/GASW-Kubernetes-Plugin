@@ -25,7 +25,7 @@ public class K8sExecutor implements ExecutorPlugin {
     public void load(GaswInput gaswInput) throws GaswException {
 		K8sConfiguration conf = K8sConfiguration.getInstance();
 
-		conf.init("config.json");
+		conf.init(K8sConstants.pluginConfig);
 		manager = new K8sManager("find workflow name here");
 		manager.init();
 		

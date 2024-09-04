@@ -7,15 +7,15 @@ EXECUTOR 	= java -jar
 
 ####################
 
-SCP_HOST	= 192.168.122.149
-SCP_USER	= centos
-SCP_FOLDER	=
+SCP_HOST	= 192.168.122.180
+SCP_USER	= almalinux
+SCP_FOLDER	= /var/www/cgi-bin/m2Server-gasw3/plugins/gasw-local-plugin-3.2.0-jar-with-dependencies.jar
 
 ####################
 
 DEBUG_FLAGS = -X
 
-all: compile exec
+all: compile remote
 
 compile:
 	@mvn clean package

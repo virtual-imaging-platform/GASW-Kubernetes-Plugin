@@ -8,7 +8,6 @@ import org.json.JSONObject;
 
 import fr.insalyon.creatis.gasw.GaswException;
 import io.kubernetes.client.openapi.ApiClient;
-import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.Configuration;
 import io.kubernetes.client.openapi.apis.BatchV1Api;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
@@ -17,7 +16,6 @@ import io.kubernetes.client.util.ClientBuilder;
 import io.kubernetes.client.util.Config;
 import io.kubernetes.client.util.credentials.AccessTokenAuthentication;
 import org.apache.log4j.Logger;
-
 
 /**
  * K8sConfiguration
@@ -73,9 +71,9 @@ public class K8sConfiguration {
 			k8sNamespace = map.get("k8s_namespace").toString();
 			nfsAddress = map.get("nfs_address").toString();
 			nfsPath = map.get("nfs_path").toString();
-
+			logger.info("Configuration file was loaded successfully !");
 		} catch (IOException e) {
-			logger.error(e.getStackTrace());
+			logger.error(e.getStackTrace(), e);
 			throw new GaswException("Client creation failed");
 		}
 	}
@@ -84,6 +82,7 @@ public class K8sConfiguration {
 		k8sCoreApi = new CoreV1Api(client);
 		k8sBatchApi =  new BatchV1Api(client);
 		k8sStorageApi = new StorageV1Api(client);
+		logger.info("Apis were defined successffully");
 	}
 	
 	/**
@@ -91,11 +90,11 @@ public class K8sConfiguration {
 	 */
 	private void createLocalClient() throws GaswException {
 		try {
-			ApiClient client = Config.fromConfig("/home/billon/.kube/config");
+			ApiClient client = Config.fromConfig(K8sConstants.kubeConfig);
 			Configuration.setDefaultApiClient(client);
 			defineApis(client);
 		} catch (IOException e) {
-			logger.error(e.getStackTrace());
+			logger.error(e.getStackTrace(), e);
 			throw new GaswException("Client creation failed");
 		}
 	}
@@ -113,5 +112,4 @@ public class K8sConfiguration {
 			.build();
 		defineApis(client);
 	}
-
 }

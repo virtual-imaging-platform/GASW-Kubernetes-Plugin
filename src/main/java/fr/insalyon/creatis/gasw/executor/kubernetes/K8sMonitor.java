@@ -67,7 +67,7 @@ public class K8sMonitor extends GaswMonitor {
 						job.setStatus(GaswStatus.ERROR);
 					}
 					jobDAO.update(job);
-					new K8sOutputParser(job.getId(), manager).start();
+					// new K8sOutputParser(job.getId(), manager).start();
 				}
 
 				Thread.sleep(GaswConfiguration.getInstance().getDefaultSleeptime());
