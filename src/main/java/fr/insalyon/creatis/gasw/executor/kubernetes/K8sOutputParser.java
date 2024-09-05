@@ -17,25 +17,25 @@ public class K8sOutputParser extends GaswOutputParser {
     private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
     private File stdOut;
     private File stdErr;
-	private K8sManager manager;
-	private String jobID;
+    private K8sManager manager;
+    private String jobID;
 
     public K8sOutputParser(String jobID, K8sManager manager) {
         super(jobID);
-		this.manager = manager;
-		this.jobID = jobID;
+        this.manager = manager;
+        this.jobID = jobID;
     }
 
     @Override
     public GaswOutput getGaswOutput() throws GaswException {
         stdOut = getAppStdFile(GaswConstants.OUT_EXT, GaswConstants.OUT_ROOT);
         stdErr = getAppStdFile(GaswConstants.ERR_EXT, GaswConstants.ERR_ROOT);
-		K8sJob job = manager.getJob(jobID);
-		if (job == null)
-			throw new GaswException("Job do not exist ! (output parser)");
+        K8sJob job = manager.getJob(jobID);
+        if (job == null)
+            throw new GaswException("Job do not exist ! (output parser)");
 
-		stdOut = job.getStdout();
-		stdErr = job.getStderr();
+        stdOut = job.getStdout();
+        stdErr = job.getStderr();
 
         moveProvenanceFile(".");
 

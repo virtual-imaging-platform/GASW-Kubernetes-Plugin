@@ -1,5 +1,7 @@
 package fr.insalyon.creatis.gasw.executor.kubernetes;
 
+import fr.insalyon.creatis.gasw.Gasw;
+import fr.insalyon.creatis.gasw.GaswConfiguration;
 import fr.insalyon.creatis.gasw.GaswException;
 import fr.insalyon.creatis.gasw.GaswInput;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
@@ -14,7 +16,7 @@ import net.xeoh.plugins.base.annotations.PluginImplementation;
 public class K8sExecutor implements ExecutorPlugin {
 
     private K8sSubmit k8sSubmit;
-	private K8sManager manager;
+    private K8sManager manager;
 
     @Override
     public String getName() {
@@ -23,14 +25,14 @@ public class K8sExecutor implements ExecutorPlugin {
 
     @Override
     public void load(GaswInput gaswInput) throws GaswException {
-		K8sConfiguration conf = K8sConfiguration.getInstance();
+        K8sConfiguration conf = K8sConfiguration.getInstance();
 
-		conf.init(K8sConstants.pluginConfig);
-		manager = new K8sManager("find workflow name here");
-		manager.init();
-		
-		k8sSubmit = new K8sSubmit(gaswInput, new K8sMinorStatusGenerator(), manager);
-		K8sMonitor.getInstance().setManager(manager);
+        conf.init(K8sConstants.pluginConfig);
+        manager = new K8sManager(GaswConfiguration.getInstance().getSimulationID());
+        manager.init();
+        
+        k8sSubmit = new K8sSubmit(gaswInput, new K8sMinorStatusGenerator(), manager);
+        K8sMonitor.getInstance().setManager(manager);
     }
 
     @Override
@@ -45,10 +47,10 @@ public class K8sExecutor implements ExecutorPlugin {
 
     @Override
     public void terminate() throws GaswException {
-		// Plugin
-		manager.destroy();
+        // Plugin
+        manager.destroy();
 
-		// Gasw
+        // Gasw
         // k8sSubmit.terminate();
         K8sMonitor.getInstance().terminate();
     }
