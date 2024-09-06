@@ -122,7 +122,7 @@ public class K8sManager {
             	stdErrDir.mkdirs();
         }
 	}
-q
+
     /**
      * Create a thread instance that will launch job when ressources are available (volumes)
      * The end variable is used to know if a thread instance has already been launched.
