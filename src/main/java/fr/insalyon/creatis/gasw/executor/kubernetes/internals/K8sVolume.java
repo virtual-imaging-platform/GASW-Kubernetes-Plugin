@@ -5,8 +5,6 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
-import com.google.protobuf.Api;
-
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConstants;
 import io.kubernetes.client.custom.Quantity;
@@ -19,17 +17,17 @@ import io.kubernetes.client.openapi.models.V1PersistentVolumeClaim;
 import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimSpec;
 import io.kubernetes.client.openapi.models.V1PersistentVolumeSpec;
 import io.kubernetes.client.openapi.models.V1VolumeResourceRequirements;
-import io.kubernetes.client.proto.V1.Volume;
 
 /**
  * K8sVolume
  */
 public class K8sVolume {
     private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
+    private final K8sConfiguration	conf;
+
     private V1PersistentVolume 		pv;
     private V1PersistentVolumeClaim pvc;
     private String 					name;
-    private final K8sConfiguration	conf;
 
     public K8sVolume(K8sConfiguration conf, String workflowName) {
         this.conf = conf;
@@ -37,7 +35,7 @@ public class K8sVolume {
     }
 
     public String getName() { return name; }
-    public String getClaimName() { return name.toLowerCase() + "-claim"; }
+    public String getClaimName() { return getIDName() + "-claim"; }
     public String getSubMountPath() { return conf.getNFSPath() + getName() + "/"; } 
 
     /**
@@ -48,7 +46,7 @@ public class K8sVolume {
     }
     
     public void createPV () throws ApiException {
-        System.err.println("Volume creation submitted");
+        System.err.println("Volume creation submitted for " + getIDName());
         pv = new V1PersistentVolume()
             .metadata(new V1ObjectMeta().name(getIDName()))
             .spec(new V1PersistentVolumeSpec()
@@ -62,6 +60,7 @@ public class K8sVolume {
     }
  
     public void createPVC() throws ApiException {
+        System.err.println("VolumeClaim creation submitted for " + getClaimName());
         pvc = new V1PersistentVolumeClaim()
             .metadata(new V1ObjectMeta().name(getClaimName()).namespace(conf.getK8sNamespace()))
             .spec(new V1PersistentVolumeClaimSpec()
@@ -72,7 +71,6 @@ public class K8sVolume {
                 .volumeName(getIDName()));
 
         conf.getK8sCoreApi().createNamespacedPersistentVolumeClaim(conf.getK8sNamespace(), pvc).execute();
-        System.err.println("PVC creation submitted");
     }
 
     public void deletePVC() throws ApiException {
@@ -108,10 +106,6 @@ public class K8sVolume {
         }
     }
 
-    /**
-     * @param volumeName
-     * @return
-     */
     public static K8sVolume retrieve(String volumeName) {
         K8sConfiguration conf = K8sConfiguration.getInstance();
         CoreV1Api api = conf.getK8sCoreApi();

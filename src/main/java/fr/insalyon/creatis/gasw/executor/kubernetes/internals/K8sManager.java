@@ -66,7 +66,7 @@ public class K8sManager {
             
             /* hard cleaning not prod */
             for (K8sJob job : jobs) { job.clean(); }
-            volume = null;
+                volume = null;
         } catch (ApiException e) {
             logger.error("Failed to destroy the manager");
         }
@@ -139,7 +139,7 @@ public class K8sManager {
     }
 
     public void submitter(List<String> cmd, String dockerImage, String jobID) {
-        K8sJob exec = new K8sJob(jobID, cmd, dockerImage, volume, sharedVolume);
+        K8sJob exec = new K8sJob(jobID, cmd, dockerImage, Arrays.asList(volume, sharedVolume));
         submitter(exec);
     }
 
@@ -156,7 +156,6 @@ public class K8sManager {
                 logger.error(e.getMessage());
             } catch (Exception e) {
                 logger.error("Something bad happened during the K8sRunner", e);
-                logger.error(e.getStackTrace());
             }
         }
 
@@ -195,8 +194,8 @@ public class K8sManager {
 		System.err.println("voici les jobs non fini avant copi " + copy.toString());
         Iterator<K8sJob> it = copy.iterator();
         while (it.hasNext()) {
-               if (it.next().isTerminated())
-                   it.remove();
+            if (it.next().isTerminated())
+               it.remove();
         }
         return copy; 
     }

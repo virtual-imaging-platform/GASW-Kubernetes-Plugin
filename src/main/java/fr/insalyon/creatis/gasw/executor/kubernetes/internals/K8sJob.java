@@ -1,18 +1,12 @@
 package fr.insalyon.creatis.gasw.executor.kubernetes.internals;
 
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
-import fr.insalyon.creatis.gasw.GaswConstants;
 import fr.insalyon.creatis.gasw.execution.GaswStatus;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConstants;
@@ -45,23 +39,56 @@ public class K8sJob {
 	private String					lowerJobID;
     private String 					dockerImage;
     private List<String> 			command;
-    private K8sVolume 				volume;
-	private K8sVolume				sharedVolume;
+    private List<K8sVolume>         volumes;
     private V1Job 					job;
+
     private boolean 				submited = false;
     private boolean					terminated = false;
 
-    public K8sJob(String jobID, List<String> command, String dockerImage, K8sVolume volume, K8sVolume sharedVolume) {
+
+    /**
+     * @param jobID
+     * @param command
+     * @param dockerImage
+     * @param volumes -> the first volume correspond to the workingdir volume /workflow-xxxx/
+     */
+    public K8sJob(String jobID, List<String> command, String dockerImage, List<K8sVolume> volumes) {
         conf = K8sConfiguration.getInstance();
         this.jobID = jobID;
 		this.lowerJobID = jobID.toLowerCase();
         this.command = command;
         this.dockerImage = dockerImage;
-        this.volume = volume;
-		this.sharedVolume = sharedVolume;
+        this.volumes = volumes;
 
         V1Container ctn = createContainer(this.dockerImage, this.command);
         configure(ctn);
+    }
+
+    private List<V1Volume> getVolumes() {
+        List<V1Volume> volumesConverted = new ArrayList<V1Volume>();
+
+        for (K8sVolume vol : volumes) {
+            V1Volume item = new V1Volume()
+                .name(vol.getIDName())
+                .persistentVolumeClaim(new V1PersistentVolumeClaimVolumeSource()
+                    .claimName(vol.getClaimName()));
+
+            volumesConverted.add(item);
+        }
+        return volumesConverted;
+    }
+
+    private List<V1VolumeMount> getVolumesMounts() {
+        List<V1VolumeMount> volumesMounts = new ArrayList<V1VolumeMount>();
+
+        for (K8sVolume vol : volumes) {
+            V1VolumeMount item = new V1VolumeMount()
+                .name(vol.getIDName())
+                .mountPath(K8sConstants.mountPathContainer + vol.getName());
+
+            volumesMounts.add(item);
+        }
+        return volumesMounts;
     }
 
     /**
@@ -75,16 +102,7 @@ public class K8sJob {
         V1PodSpec podSpec = new V1PodSpec()
                 .containers(Arrays.asList(container))
                 .restartPolicy("Never")
-                .volumes(Arrays.asList(new V1Volume()
-                        .name(volume.getIDName())
-                        .persistentVolumeClaim(new V1PersistentVolumeClaimVolumeSource()
-                                .claimName(volume.getClaimName())),	
-							new V1Volume()
-						.name(sharedVolume.getIDName())
-						.persistentVolumeClaim(new V1PersistentVolumeClaimVolumeSource()
-								.claimName(sharedVolume.getClaimName())		
-						)		
-				));
+                .volumes(getVolumes());
 
         V1PodTemplateSpec podspecTemplate = new V1PodTemplateSpec().spec(podSpec);
 
@@ -102,14 +120,8 @@ public class K8sJob {
         V1Container ctn = new V1Container()
                 .name(lowerJobID)
                 .image(dockerImage)
-                .workingDir(K8sConstants.mountPathContainer + volume.getName()) // may be to change
-                .volumeMounts(Arrays.asList(new V1VolumeMount()
-                        .name(volume.getIDName())
-                        .mountPath(K8sConstants.mountPathContainer + volume.getName())
-						,new V1VolumeMount()
-						.name(sharedVolume.getIDName())
-						.mountPath(K8sConstants.mountPathContainer + sharedVolume.getName())
-				))
+                .workingDir(K8sConstants.mountPathContainer + volumes.get(0).getName()) // may be to change
+                .volumeMounts(getVolumesMounts())
                 .command(getWrappedCommand());
         return ctn;
     }
@@ -121,13 +133,13 @@ public class K8sJob {
     private List<String> getWrappedCommand() {
         List<String> wrappedCommand = new ArrayList<String>(command);
         Integer last = wrappedCommand.size() - 1;
-
         String redirectStdout = "> " + getContainerLogPath("out") + " ";
         String redirectStderr = "2> " + getContainerLogPath("err") + " ";
         String redirectCmd = "exec " + redirectStdout + redirectStderr + ";";
-        wrappedCommand.set(last, redirectCmd + " " + "sh " + wrappedCommand.get(last));
-		System.err.println("voici la wrapped command : " + wrappedCommand.toString());
 
+        wrappedCommand.set(last, redirectCmd + " sh " + wrappedCommand.get(last));
+        System.err.println("voici la command original : " + command.toString());
+		System.err.println("voici la wrapped command : " + wrappedCommand.toString());
 		// List<String> fixed = new ArrayList<String>();
 		// fixed.add("/bin/sh");
 		// fixed.add("-c");
@@ -137,27 +149,18 @@ public class K8sJob {
     }
 
     /**
-     * @param extension (stdout or stderr)
+     * @param extension (out or err)
      * @return file that contain the log (inside container)
      */
     private String getContainerLogPath(String extension) {
-        return K8sConstants.mountPathContainer + volume.getName() + "/" + extension + "/" + jobID + ".sh" + "." + extension;
-    }
-
-    /**
-     * @param extension (stdout or stderr)
-     * @return file that contain the log (from nfs server machine)
-     */
-    private String getLogPath(String extension) {
-        return volume.getSubMountPath() + K8sConstants.subLogPath + jobID + "." + extension;
+        return "./" + extension + "/" + jobID + ".sh" + "." + extension;
     }
 
     public void start() throws ApiException {
         BatchV1Api api = conf.getK8sBatchApi();
-        System.err.println("statut du volume " + volume.isAvailable());
 
-        if (job == null || !volume.isAvailable()) {
-            logger.error("Impossible to start job, isn't configured or volume not ready !");
+        if (job == null) {
+            logger.error("Impossible to start job value is null");
         } else {
             api.createNamespacedJob(conf.getK8sNamespace(), job).execute();
             submited = true;
@@ -191,18 +194,7 @@ public class K8sJob {
      * Return a configuration copy job of the actual job (unstarted)
      */
     public K8sJob clone() {
-        return new K8sJob(jobID, command, dockerImage, volume, sharedVolume);
-    }
-
-    /**
-     * Develop function purpose (blocking)
-     * @throws InterruptedException
-     */
-    public void waitForCompletion() throws InterruptedException {
-        if (job != null) {
-            while (getStatus() != GaswStatus.COMPLETED)
-                TimeUnit.MILLISECONDS.sleep(200);
-        }
+        return new K8sJob(jobID, command, dockerImage, volumes);
     }
 
     public GaswStatus getStatus() {
@@ -253,27 +245,7 @@ public class K8sJob {
         }
     }
 
-    public File getStdout() {
-        return new File(getLogPath("stdout"));
-    }
-
-    public File getStderr() {
-        return new File(getLogPath("stderr"));
-    }
-
-    public Map<String, String> getOutputs() {
-        Map<String, String> outputs = new HashMap<String, String>();
-
-        try {
-            outputs.put("stdout", Files.readString(Paths.get(getLogPath("stdout"))));
-            outputs.put("stderr", Files.readString(Paths.get(getLogPath("stderr"))));
-            return (outputs);
-        } catch (Exception e) {
-            logger.error("Failed to read outputs files", e);
-            return (outputs);
-        }
-    }
-
+    
     public void setTerminated() { 
         terminated = true; 
     }
@@ -285,4 +257,41 @@ public class K8sJob {
     public String getJobID() { 
         return jobID; 
     }
+
+        /**
+     * Develop function purpose (blocking)
+     * @throws InterruptedException
+     */
+    public void waitForCompletion() throws InterruptedException {
+        if (job != null) {
+            while (getStatus() != GaswStatus.COMPLETED)
+                TimeUnit.MILLISECONDS.sleep(200);
+        }
+    }
 }
+
+
+        // public File getStdout() {
+        //     return new File(getLogPath("stdout"));
+        // }
+    
+        // public File getStderr() {
+        //     return new File(getLogPath("stderr"));
+        // }
+    
+        // public Map<String, String> getOutputs() {
+        //     Map<String, String> outputs = new HashMap<String, String>();
+    
+        //     try {
+        //         outputs.put("stdout", Files.readString(Paths.get(getLogPath("stdout"))));
+        //         outputs.put("stderr", Files.readString(Paths.get(getLogPath("stderr"))));
+        //         return (outputs);
+        //     } catch (Exception e) {
+        //         logger.error("Failed to read outputs files", e);
+        //         return (outputs);
+        //     }
+        // }
+
+            // private boolean areVolumesAvailables() {
+    //     return volumes.stream().allMatch(K8sVolume::isAvailable);
+    // }

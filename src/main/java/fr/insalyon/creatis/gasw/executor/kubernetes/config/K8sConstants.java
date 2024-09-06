@@ -7,7 +7,6 @@ public class K8sConstants {
     public static String pluginConfig = "/var/www/cgi-bin/kubernetes/config.json"; 
     public static String storageClassName = "";
     public static String mountPathContainer = "/var/www/html/workflows/";
-    public static String subLogPath = "";
     public static Integer ttlJob = 500;
 
     // GASW
