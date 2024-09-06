@@ -8,12 +8,11 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.io.output.StringBuilderWriter;
 import org.apache.log4j.Logger;
 
+import fr.insalyon.creatis.gasw.GaswConstants;
 import fr.insalyon.creatis.gasw.execution.GaswStatus;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConstants;
@@ -123,8 +122,8 @@ public class K8sJob {
         List<String> wrappedCommand = new ArrayList<String>(command);
         Integer last = wrappedCommand.size() - 1;
 
-        String redirectStdout = "> " + getContainerLogPath("stdout") + " ";
-        String redirectStderr = "2> " + getContainerLogPath("stderr") + " ";
+        String redirectStdout = "> " + getContainerLogPath("out") + " ";
+        String redirectStderr = "2> " + getContainerLogPath("err") + " ";
         String redirectCmd = "exec " + redirectStdout + redirectStderr + ";";
         wrappedCommand.set(last, redirectCmd + " " + "sh " + wrappedCommand.get(last));
 		System.err.println("voici la wrapped command : " + wrappedCommand.toString());
@@ -134,7 +133,6 @@ public class K8sJob {
 		// fixed.add("-c");
 		// fixed.add("sleep 50000");
 		// return fixed;
-
         return wrappedCommand;
     }
 
@@ -143,7 +141,7 @@ public class K8sJob {
      * @return file that contain the log (inside container)
      */
     private String getContainerLogPath(String extension) {
-        return K8sConstants.mountPathContainer + volume.getName() + "/" + K8sConstants.subLogPath + jobID + "." + extension;
+        return K8sConstants.mountPathContainer + volume.getName() + "/" + extension + "/" + jobID + ".sh" + "." + extension;
     }
 
     /**
@@ -231,7 +229,6 @@ public class K8sJob {
         }
         return GaswStatus.UNDEFINED;
     }
-
 
     /**
      * @implNote Should be adapted if multiple containers / pods per job

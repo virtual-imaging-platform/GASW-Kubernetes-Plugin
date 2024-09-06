@@ -1,5 +1,6 @@
 package fr.insalyon.creatis.gasw.executor.kubernetes.internals;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -13,6 +14,8 @@ import org.joda.time.Duration;
 
 import com.google.protobuf.Api;
 
+import fr.insalyon.creatis.gasw.GaswConfiguration;
+import fr.insalyon.creatis.gasw.GaswConstants;
 import fr.insalyon.creatis.gasw.GaswException;
 import fr.insalyon.creatis.gasw.execution.GaswStatus;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
@@ -41,7 +44,8 @@ public class K8sManager {
         try {
             checkNamespace();
 			checkSharedVolume();
-            System.err.println("namespaces checked + check shared volume");
+			checkOutputsDir();
+            System.err.println("namespaces checked + check shared volume + check output dirs");
 
             volume = new K8sVolume(conf, workflowName);
             volume.createPV();
@@ -105,6 +109,20 @@ public class K8sManager {
 		sharedVolume = sharedUserVolume;
 	}
 
+	/**
+	 * Check for existance of STDOUR and STDERR from the plugin machine.
+	 */
+	public void checkOutputsDir() {
+		File stdOutDir = new File(GaswConstants.OUT_ROOT);
+        	if (!stdOutDir.exists()) {
+            	stdOutDir.mkdirs();
+        }
+		File stdErrDir = new File(GaswConstants.ERR_ROOT);
+        	if (!stdErrDir.exists()) {
+            	stdErrDir.mkdirs();
+        }
+	}
+q
     /**
      * Create a thread instance that will launch job when ressources are available (volumes)
      * The end variable is used to know if a thread instance has already been launched.

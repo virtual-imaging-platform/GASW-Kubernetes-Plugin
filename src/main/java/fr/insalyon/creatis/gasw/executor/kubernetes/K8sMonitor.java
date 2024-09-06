@@ -41,7 +41,7 @@ public class K8sMonitor extends GaswMonitor {
     private void statusChecker() {
         ArrayList<K8sJob> jobs = manager.getUnfinishedJobs();
 
-		System.err.println("ici je check le status " + jobs.toString());
+        System.err.println("ici je check le status " + jobs.toString());
         for (K8sJob j : jobs) {
             if (j.getStatus() == GaswStatus.COMPLETED || j.getStatus() == GaswStatus.ERROR) {
                 Integer exitCode = j.getExitCode();
@@ -56,13 +56,13 @@ public class K8sMonitor extends GaswMonitor {
     @Override
     public void run() {
         while (!stop) {
-			System.err.println("je suis dans cette boucle " +  stop + "\n\n");
+            System.err.println("je suis dans cette boucle " +  stop + "\n\n");
             statusChecker();
             try {
                 while (K8sSubmit.hasFinishedJobs()) {
-					System.err.println("t'es bloqué ciic ??");
+                    System.err.println("t'es bloqué ciic ??");
                     String[] s = K8sSubmit.pullFinishedJobID().split("--");
-					System.err.println("ici s[0] " + s[0] + "l'exit + " + s[1]);
+                    System.err.println("ici s[0] " + s[0] + "l'exit + " + s[1]);
                     Job job = jobDAO.getJobByID(s[0]);
                     job.setExitCode(Integer.parseInt(s[1]));
 
@@ -72,10 +72,9 @@ public class K8sMonitor extends GaswMonitor {
                         job.setStatus(GaswStatus.ERROR);
                     }
                     jobDAO.update(job);
-                    // new K8sOutputParser(job.getId(), manager).start();
+                    new K8sOutputParser(job.getId(), manager).start();
                 }
 
-				// Thread.sleep(1000);
                 Thread.sleep(GaswConfiguration.getInstance().getDefaultSleeptime());
 
             } catch (GaswException ex) {
@@ -106,7 +105,7 @@ public class K8sMonitor extends GaswMonitor {
     }
 
     public synchronized void terminate() {
-		System.err.println("ICI QUELQUEN ARRET LA BOUCLe");
+        System.err.println("ICI QUELQUEN ARRET LA BOUCLe");
         stop = true;
         instance = null;
     }
