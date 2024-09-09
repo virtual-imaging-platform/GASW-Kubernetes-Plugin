@@ -36,6 +36,7 @@ public class K8sJob {
     private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
     private final K8sConfiguration 	conf;
 
+	private String					workflowName;
     private String 					jobID;
 	private String					lowerJobID;
     private String 					dockerImage;
@@ -53,12 +54,13 @@ public class K8sJob {
      * @param dockerImage
      * @param volumes -> the first volume correspond to the workingdir volume /workflow-xxxx/
      */
-    public K8sJob(String jobID, List<String> command, String dockerImage, List<K8sVolume> volumes) {
+    public K8sJob(String jobID, String workflowName, List<String> command, String dockerImage, List<K8sVolume> volumes) {
         conf = K8sConfiguration.getInstance();
         this.jobID = jobID;
         this.command = command;
         this.dockerImage = dockerImage;
         this.volumes = volumes;
+		this.workflowName = workflowName;
 
 		generateIDName(jobID);
         V1Container ctn = createContainer(this.dockerImage, this.command);
@@ -66,7 +68,14 @@ public class K8sJob {
     }
 
 	private void generateIDName(String baseName) {
-		lowerJobID = baseName.replace("_", "-").toLowerCase();
+		for (int i = baseName.length() - 1; i > 0; i--) {
+			if ( ! Character.isDigit(baseName.charAt(i))) {
+				lowerJobID = baseName.substring(i + 1, baseName.length());
+				break;
+			}
+		}
+		lowerJobID = workflowName.toLowerCase() + "-" + lowerJobID;
+		System.err.println("voici le nom generated ID NAME : " + lowerJobID);
 	}
 
     private List<V1Volume> getVolumes() {
@@ -207,7 +216,7 @@ public class K8sJob {
      * Return a configuration copy job of the actual job (unstarted)
      */
     public K8sJob clone() {
-        return new K8sJob(jobID, command, dockerImage, volumes);
+        return new K8sJob(jobID, workflowName, command, dockerImage, volumes);
     }
 
     public GaswStatus getStatus() {

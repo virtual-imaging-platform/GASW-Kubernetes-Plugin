@@ -23,15 +23,19 @@ import io.kubernetes.client.openapi.models.V1ObjectMeta;
 
 public class K8sManager {
     private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
+
     private String						workflowName;
     private K8sVolume 					volume;
 	private K8sVolume					sharedVolume;
-    private volatile ArrayList<K8sJob> 	jobs;
+    
+	private volatile ArrayList<K8sJob> 	jobs;
     private Boolean						end;
+	private Boolean						init;
 
     public K8sManager(String workflowName) {
         this.workflowName = workflowName;
         this.jobs = new ArrayList<K8sJob>();
+		this.init = false;
     }
 
     public void init() {
@@ -39,15 +43,18 @@ public class K8sManager {
         System.err.println("K8s Manager init with " + workflowName);
         try {
             checkNamespace();
+			System.err.println("Namespaces checked !");
 			checkSharedVolume();
+			System.err.println("SharedUser volume checked !");
 			checkOutputsDir();
-            System.err.println("namespaces checked + check shared volume + check output dirs");
+            System.err.println("User ouputs directories checked !");
 
             volume = new K8sVolume(conf, workflowName);
             volume.createPV();
             volume.createPVC();
-            System.err.println("volumes created");
+            System.err.println("Workflow volume created !");
 
+			init = true;
         } catch (Exception e) {
             logger.error("Failed to init the manager", e);
         }
@@ -109,18 +116,14 @@ public class K8sManager {
 	 * Check for existance of STDOUR and STDERR from the plugin machine.
 	 */
 	public void checkOutputsDir() {
-		File stdOutDir = new File(GaswConstants.OUT_ROOT);
-        	if (!stdOutDir.exists()) {
-            	stdOutDir.mkdirs();
-        }
-		File stdErrDir = new File(GaswConstants.ERR_ROOT);
-        	if (!stdErrDir.exists()) {
-            	stdErrDir.mkdirs();
-        }
-		File cacheDir = new File("./cache");
-        	if (!cacheDir.exists()) {
-            	cacheDir.mkdirs();
-        }
+		String[] dirs = {GaswConstants.OUT_ROOT, GaswConstants.ERR_ROOT, "./cache"};
+		
+		for (String dirName : dirs) {
+			File dir = new File(dirName);
+
+			if ( ! dir.exists())
+				dir.mkdirs();
+		}
 	}
 
     /**
@@ -138,8 +141,17 @@ public class K8sManager {
         }
     }
 
+	/**
+	 * Public submitter that prepare the K8sJob object and wait for the manager to be initied (in case of slow cluster)
+	 */
     public void submitter(List<String> cmd, String dockerImage, String jobID) {
-        K8sJob exec = new K8sJob(jobID, cmd, dockerImage, Arrays.asList(volume, sharedVolume));
+		while (init == false) {
+			try {
+				TimeUnit.MILLISECONDS.sleep(600);
+			} catch (InterruptedException e) {}
+		}
+
+        K8sJob exec = new K8sJob(jobID, workflowName, cmd, dockerImage, Arrays.asList(volume, sharedVolume));
         submitter(exec);
     }
 
