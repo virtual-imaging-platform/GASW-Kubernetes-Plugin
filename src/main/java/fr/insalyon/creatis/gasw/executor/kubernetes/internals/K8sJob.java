@@ -48,6 +48,7 @@ public class K8sJob {
 
     private boolean 				submited = false;
     private boolean					terminated = false;
+    private boolean                 cancelled = false;
 
 
     /**
@@ -166,6 +167,7 @@ public class K8sJob {
     }
 
     public void setTerminated() { terminated = true; }
+    public void setCancelled() { cancelled = true; }
 
     public boolean isTerminated() { return terminated; }
 
@@ -226,6 +228,8 @@ public class K8sJob {
     public GaswStatus getStatus() {
         BatchV1Api api = conf.getK8sBatchApi();
 
+        if (cancelled == true)
+            return GaswStatus.CANCELLED;
         if (job != null) {
             if (submited == false)
                 return GaswStatus.NOT_SUBMITTED;

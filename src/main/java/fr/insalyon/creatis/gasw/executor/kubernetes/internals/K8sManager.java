@@ -146,20 +146,33 @@ public class K8sManager {
      * Public submitter that prepare the K8sJob object and wait for the manager to be initied (in case of slow cluster)
      */
     public void submitter(String cmd, String dockerImage, String jobID) {
+        int i = 0;
         K8sJob exec = new K8sJob(jobID, workflowName);
+
+        while (true) {
+            if (init == true) {
+                break;
+            } else if (i == K8sConstants.maxRetryToPush) {
+                synchronized (this) {
+                    jobs.add(exec);
+                }
+                exec.setCancelled();
+                
+                return ;
+            } else {
+                try {
+                    System.err.println("JE SUIS DANS LATTENTE");
+                    TimeUnit.MILLISECONDS.sleep(10000);
+                } catch (InterruptedException e) {}
+            }
+            i++;
+        }
 
         exec.setCommand(cmd);
         exec.setImage(dockerImage);
         exec.setVolumes(Arrays.asList(volume, sharedVolume));
         exec.setWorkingDir(K8sConstants.mountPathContainer + volume.getName());
         exec.configure();
-
-        while (init == false) {
-            try {
-                System.err.println("JE SUIS DANS LATTENTE");
-                TimeUnit.MILLISECONDS.sleep(600);
-            } catch (InterruptedException e) {}
-        }
         submitter(exec);
     }
 

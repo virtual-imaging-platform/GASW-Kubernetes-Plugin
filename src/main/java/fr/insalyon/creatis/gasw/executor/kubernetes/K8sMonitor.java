@@ -40,14 +40,19 @@ public class K8sMonitor extends GaswMonitor {
 
     private void statusChecker() {
         ArrayList<K8sJob> jobs = manager.getUnfinishedJobs();
+        Integer exitCode;
 
         System.err.println("ici je check le status " + jobs.toString());
         for (K8sJob j : jobs) {
-            if (j.getStatus() == GaswStatus.COMPLETED || j.getStatus() == GaswStatus.ERROR) {
-                Integer exitCode = j.getExitCode();
-                String jobId = j.getJobID();
+            GaswStatus stus = j.getStatus();
+            if (stus != GaswStatus.RUNNING && stus != GaswStatus.QUEUED && stus != GaswStatus.RESCHEDULE && stus != GaswStatus.NOT_SUBMITTED) {
+                if (j.getStatus() == GaswStatus.CANCELLED)
+                    exitCode = 1;
+                else
+                    exitCode = j.getExitCode();
+
                 j.setTerminated();
-                K8sSubmit.addFinishedJob(jobId, exitCode);
+                K8sSubmit.addFinishedJob(j.getJobID(), exitCode);
                 System.err.println("le job est terminé");
             }
         }
@@ -56,14 +61,13 @@ public class K8sMonitor extends GaswMonitor {
     @Override
     public void run() {
         while (!stop) {
-            System.err.println("je suis dans cette boucle " +  stop + "\n\n");
+            System.err.println("je suis dans cette boucle " + stop + "\n\n");
             statusChecker();
             try {
                 while (K8sSubmit.hasFinishedJobs()) {
-                    System.err.println("t'es bloqué ciic ??");
                     String[] s = K8sSubmit.pullFinishedJobID().split("--");
-                    System.err.println("ici s[0] " + s[0] + "l'exit + " + s[1]);
                     Job job = jobDAO.getJobByID(s[0]);
+
                     job.setExitCode(Integer.parseInt(s[1]));
 
                     if (job.getExitCode() == 0) {
