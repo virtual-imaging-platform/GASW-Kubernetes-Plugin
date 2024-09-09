@@ -257,7 +257,6 @@ public class K8sJob {
             return 1;
         }
     }
-
     
     public void setTerminated() { 
         terminated = true; 
@@ -271,7 +270,7 @@ public class K8sJob {
         return jobID; 
     }
 
-        /**
+    /**
      * Develop function purpose (blocking)
      * @throws InterruptedException
      */
@@ -282,29 +281,3 @@ public class K8sJob {
         }
     }
 }
-
-
-        // public File getStdout() {
-        //     return new File(getLogPath("stdout"));
-        // }
-    
-        // public File getStderr() {
-        //     return new File(getLogPath("stderr"));
-        // }
-    
-        // public Map<String, String> getOutputs() {
-        //     Map<String, String> outputs = new HashMap<String, String>();
-    
-        //     try {
-        //         outputs.put("stdout", Files.readString(Paths.get(getLogPath("stdout"))));
-        //         outputs.put("stderr", Files.readString(Paths.get(getLogPath("stderr"))));
-        //         return (outputs);
-        //     } catch (Exception e) {
-        //         logger.error("Failed to read outputs files", e);
-        //         return (outputs);
-        //     }
-        // }
-
-            // private boolean areVolumesAvailables() {
-    //     return volumes.stream().allMatch(K8sVolume::isAvailable);
-    // }

@@ -1,6 +1,5 @@
 package fr.insalyon.creatis.gasw.executor.kubernetes;
 
-import fr.insalyon.creatis.gasw.Gasw;
 import fr.insalyon.creatis.gasw.GaswConfiguration;
 import fr.insalyon.creatis.gasw.GaswException;
 import fr.insalyon.creatis.gasw.GaswInput;

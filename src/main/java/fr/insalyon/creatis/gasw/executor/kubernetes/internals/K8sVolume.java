@@ -18,9 +18,6 @@ import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimSpec;
 import io.kubernetes.client.openapi.models.V1PersistentVolumeSpec;
 import io.kubernetes.client.openapi.models.V1VolumeResourceRequirements;
 
-/**
- * K8sVolume
- */
 public class K8sVolume {
     private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
     private final K8sConfiguration	conf;

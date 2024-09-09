@@ -8,13 +8,9 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
-import org.bouncycastle.jcajce.provider.symmetric.AES.KeyGen192;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
-import com.google.protobuf.Api;
-
-import fr.insalyon.creatis.gasw.GaswConfiguration;
 import fr.insalyon.creatis.gasw.GaswConstants;
 import fr.insalyon.creatis.gasw.GaswException;
 import fr.insalyon.creatis.gasw.execution.GaswStatus;
