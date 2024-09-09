@@ -15,6 +15,7 @@ import fr.insalyon.creatis.gasw.GaswConstants;
 import fr.insalyon.creatis.gasw.GaswException;
 import fr.insalyon.creatis.gasw.execution.GaswStatus;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
+import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConstants;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Namespace;
@@ -116,7 +117,7 @@ public class K8sManager {
      * Check for existance of STDOUR and STDERR from the plugin machine.
      */
     public void checkOutputsDir() {
-        String[] dirs = {GaswConstants.OUT_ROOT, GaswConstants.ERR_ROOT, "./cache"};
+        String[] dirs = { GaswConstants.OUT_ROOT, GaswConstants.ERR_ROOT, "./cache" };
         
         for (String dirName : dirs) {
             File dir = new File(dirName);
@@ -145,13 +146,20 @@ public class K8sManager {
      * Public submitter that prepare the K8sJob object and wait for the manager to be initied (in case of slow cluster)
      */
     public void submitter(String cmd, String dockerImage, String jobID) {
+        K8sJob exec = new K8sJob(jobID, workflowName);
+
+        exec.setCommand(cmd);
+        exec.setImage(dockerImage);
+        exec.setVolumes(Arrays.asList(volume, sharedVolume));
+        exec.setWorkingDir(K8sConstants.mountPathContainer + volume.getName());
+        exec.configure();
+
         while (init == false) {
             try {
+                System.err.println("JE SUIS DANS LATTENTE");
                 TimeUnit.MILLISECONDS.sleep(600);
             } catch (InterruptedException e) {}
         }
-
-        K8sJob exec = new K8sJob(jobID, workflowName, cmd, dockerImage, Arrays.asList(volume, sharedVolume));
         submitter(exec);
     }
 
