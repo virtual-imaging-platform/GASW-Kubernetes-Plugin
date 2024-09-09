@@ -144,7 +144,7 @@ public class K8sManager {
     /**
      * Public submitter that prepare the K8sJob object and wait for the manager to be initied (in case of slow cluster)
      */
-    public void submitter(List<String> cmd, String dockerImage, String jobID) {
+    public void submitter(String cmd, String dockerImage, String jobID) {
         while (init == false) {
             try {
                 TimeUnit.MILLISECONDS.sleep(600);

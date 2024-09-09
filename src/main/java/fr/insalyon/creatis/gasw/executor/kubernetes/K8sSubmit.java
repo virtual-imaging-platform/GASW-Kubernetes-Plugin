@@ -56,7 +56,7 @@ public class K8sSubmit extends GaswSubmit {
             jobDAO.update(job);
 
             // Kubernetes
-            List<String> cmd = Arrays.asList("/bin/sh", "-c", GaswConstants.SCRIPT_ROOT + "/" + scriptName);
+            String cmd = "bash " + GaswConstants.SCRIPT_ROOT + "/" + scriptName;
             manager.submitter(cmd, "ethaaalpha/podman-boutiques:latest", jobID);
 
         } catch (DAOException e) {

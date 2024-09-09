@@ -40,7 +40,7 @@ public class K8sJob {
     private String 					jobID;
     private String					lowerJobID;
     private String 					dockerImage;
-    private List<String> 			command;
+    private String       			command;
     private List<K8sVolume>         volumes;
     private V1Job 					job;
 
@@ -54,7 +54,7 @@ public class K8sJob {
      * @param dockerImage
      * @param volumes -> the first volume correspond to the workingdir volume /workflow-xxxx/
      */
-    public K8sJob(String jobID, String workflowName, List<String> command, String dockerImage, List<K8sVolume> volumes) {
+    public K8sJob(String jobID, String workflowName, String command, String dockerImage, List<K8sVolume> volumes) {
         conf = K8sConfiguration.getInstance();
         this.jobID = jobID;
         this.command = command;
@@ -115,32 +115,32 @@ public class K8sJob {
         V1ObjectMeta meta = new V1ObjectMeta().name(lowerJobID).namespace(conf.getK8sNamespace());
 
         V1PodSpec podSpec = new V1PodSpec()
-                .containers(Arrays.asList(container))
-                .restartPolicy("Never")
-                .volumes(getVolumes());
+            .containers(Arrays.asList(container))
+            .restartPolicy("Never")
+            .volumes(getVolumes());
 
         V1PodTemplateSpec podspecTemplate = new V1PodTemplateSpec().spec(podSpec);
 
         V1JobSpec jobSpec = new V1JobSpec()
-                .ttlSecondsAfterFinished(K8sConstants.ttlJob)
-                .template(podspecTemplate)
-                .backoffLimit(0);
+            .ttlSecondsAfterFinished(K8sConstants.ttlJob)
+            .template(podspecTemplate)
+            .backoffLimit(0);
 
         job = new V1Job()
-                .spec(jobSpec)
-                .metadata(meta);
+            .spec(jobSpec)
+            .metadata(meta);
     }
 
-    private V1Container createContainer(String dockerImage, List<String> command) {
+    private V1Container createContainer(String dockerImage, String command) {
         V1Container ctn = new V1Container()
-                .name(lowerJobID)
-                .image(dockerImage)
-                .securityContext(new V1SecurityContext()
-                    .privileged(true)
-                )
-                .workingDir(K8sConstants.mountPathContainer + volumes.get(0).getName()) // may be to change
-                .volumeMounts(getVolumesMounts())
-                .command(getWrappedCommand());
+            .name(lowerJobID)
+            .image(dockerImage)
+            .securityContext(new V1SecurityContext()
+                .privileged(true)
+            )
+            .workingDir(K8sConstants.mountPathContainer + volumes.get(0).getName()) // may be to change
+            .volumeMounts(getVolumesMounts())
+            .command(getWrappedCommand());
         return ctn;
     }
 
@@ -149,20 +149,18 @@ public class K8sJob {
      * @return Initial command redirected to out & err files
      */
     private List<String> getWrappedCommand() {
-        List<String> wrappedCommand = new ArrayList<String>(command);
-        Integer last = wrappedCommand.size() - 1;
+        List<String> wrappedCommand = new ArrayList<String>();
+
         String redirectStdout = "> " + getContainerLogPath("out") + " ";
-        String redirectStderr = "2> " + getContainerLogPath("err") + " ";
+        String redirectStderr = "2> " + getContainerLogPath("err");
         String redirectCmd = "exec " + redirectStdout + redirectStderr + ";";
 
-        wrappedCommand.set(last, redirectCmd + " bash " + wrappedCommand.get(last));
+        wrappedCommand.add(0, "bash");
+        wrappedCommand.add(1, "-c");
+        wrappedCommand.add(2, redirectCmd + " " + command);
         System.err.println("voici la command original : " + command.toString());
         System.err.println("voici la wrapped command : " + wrappedCommand.toString());
 
-        // List<String> fixed = new ArrayList<String>();
-        // fixed.add("/bin/sh");
-        // fixed.add("-c");
-        // fixed.add("echo $PWD $UID $USER $PATH && docker --version");
         // List<String> fixed = new ArrayList<String>();
         // fixed.add("/bin/sh");
         // fixed.add("-c");
