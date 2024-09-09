@@ -25,6 +25,7 @@ import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.openapi.models.V1PodSpec;
 import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
+import io.kubernetes.client.openapi.models.V1SecurityContext;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
 
@@ -55,14 +56,18 @@ public class K8sJob {
     public K8sJob(String jobID, List<String> command, String dockerImage, List<K8sVolume> volumes) {
         conf = K8sConfiguration.getInstance();
         this.jobID = jobID;
-		this.lowerJobID = jobID.toLowerCase();
         this.command = command;
         this.dockerImage = dockerImage;
         this.volumes = volumes;
 
+		generateIDName(jobID);
         V1Container ctn = createContainer(this.dockerImage, this.command);
         configure(ctn);
     }
+
+	private void generateIDName(String baseName) {
+		lowerJobID = baseName.replace("_", "-").toLowerCase();
+	}
 
     private List<V1Volume> getVolumes() {
         List<V1Volume> volumesConverted = new ArrayList<V1Volume>();
@@ -120,6 +125,9 @@ public class K8sJob {
         V1Container ctn = new V1Container()
                 .name(lowerJobID)
                 .image(dockerImage)
+				.securityContext(new V1SecurityContext()
+					.privileged(true)
+				)
                 .workingDir(K8sConstants.mountPathContainer + volumes.get(0).getName()) // may be to change
                 .volumeMounts(getVolumesMounts())
                 .command(getWrappedCommand());
@@ -137,9 +145,14 @@ public class K8sJob {
         String redirectStderr = "2> " + getContainerLogPath("err") + " ";
         String redirectCmd = "exec " + redirectStdout + redirectStderr + ";";
 
-        wrappedCommand.set(last, redirectCmd + " sh " + wrappedCommand.get(last));
+        wrappedCommand.set(last, redirectCmd + " bash " + wrappedCommand.get(last));
         System.err.println("voici la command original : " + command.toString());
 		System.err.println("voici la wrapped command : " + wrappedCommand.toString());
+
+		// List<String> fixed = new ArrayList<String>();
+		// fixed.add("/bin/sh");
+		// fixed.add("-c");
+		// fixed.add("echo $PWD $UID $USER $PATH && docker --version");
 		// List<String> fixed = new ArrayList<String>();
 		// fixed.add("/bin/sh");
 		// fixed.add("-c");

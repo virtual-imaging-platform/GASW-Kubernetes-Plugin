@@ -121,6 +121,10 @@ public class K8sManager {
         	if (!stdErrDir.exists()) {
             	stdErrDir.mkdirs();
         }
+		File cacheDir = new File("./cache");
+        	if (!cacheDir.exists()) {
+            	cacheDir.mkdirs();
+        }
 	}
 
     /**
