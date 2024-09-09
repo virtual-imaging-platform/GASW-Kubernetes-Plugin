@@ -26,16 +26,16 @@ public class K8sManager {
 
     private String						workflowName;
     private K8sVolume 					volume;
-	private K8sVolume					sharedVolume;
+    private K8sVolume					sharedVolume;
     
-	private volatile ArrayList<K8sJob> 	jobs;
+    private volatile ArrayList<K8sJob> 	jobs;
     private Boolean						end;
-	private Boolean						init;
+    private Boolean						init;
 
     public K8sManager(String workflowName) {
         this.workflowName = workflowName;
         this.jobs = new ArrayList<K8sJob>();
-		this.init = false;
+        this.init = false;
     }
 
     public void init() {
@@ -43,10 +43,10 @@ public class K8sManager {
         System.err.println("K8s Manager init with " + workflowName);
         try {
             checkNamespace();
-			System.err.println("Namespaces checked !");
-			checkSharedVolume();
-			System.err.println("SharedUser volume checked !");
-			checkOutputsDir();
+            System.err.println("Namespaces checked !");
+            checkSharedVolume();
+            System.err.println("SharedUser volume checked !");
+            checkOutputsDir();
             System.err.println("User ouputs directories checked !");
 
             volume = new K8sVolume(conf, workflowName);
@@ -54,7 +54,7 @@ public class K8sManager {
             volume.createPVC();
             System.err.println("Workflow volume created !");
 
-			init = true;
+            init = true;
         } catch (Exception e) {
             logger.error("Failed to init the manager", e);
         }
@@ -69,7 +69,7 @@ public class K8sManager {
             
             /* hard cleaning not prod */
             for (K8sJob job : jobs) { job.clean(); }
-                volume = null;
+            volume = null;
         } catch (ApiException e) {
             logger.error("Failed to destroy the manager");
         }
@@ -96,35 +96,35 @@ public class K8sManager {
 
         api.createNamespace(ns).execute();
     }
+    
+    /**
+     * Check if the /workflows/sharedata volume exist 
+     */
+    public void checkSharedVolume() throws ApiException {
+        K8sVolume sharedUserVolume = K8sVolume.retrieve("SharedData");
 
-	/**
-	 * Check if the /workflows/sharedata volume exist 
-	 */
-	public void checkSharedVolume() throws ApiException {
-		K8sVolume sharedUserVolume = K8sVolume.retrieve("SharedData");
+        if (sharedUserVolume == null) {
+            sharedUserVolume = new K8sVolume(K8sConfiguration.getInstance(), "SharedData");
 
-		if (sharedUserVolume == null) {
-			sharedUserVolume = new K8sVolume(K8sConfiguration.getInstance(), "SharedData");
+            sharedUserVolume.createPV();
+            sharedUserVolume.createPVC();
+        }
+        sharedVolume = sharedUserVolume;
+    }
 
-			sharedUserVolume.createPV();
-			sharedUserVolume.createPVC();
-		}
-		sharedVolume = sharedUserVolume;
-	}
+    /**
+     * Check for existance of STDOUR and STDERR from the plugin machine.
+     */
+    public void checkOutputsDir() {
+        String[] dirs = {GaswConstants.OUT_ROOT, GaswConstants.ERR_ROOT, "./cache"};
+        
+        for (String dirName : dirs) {
+            File dir = new File(dirName);
 
-	/**
-	 * Check for existance of STDOUR and STDERR from the plugin machine.
-	 */
-	public void checkOutputsDir() {
-		String[] dirs = {GaswConstants.OUT_ROOT, GaswConstants.ERR_ROOT, "./cache"};
-		
-		for (String dirName : dirs) {
-			File dir = new File(dirName);
-
-			if ( ! dir.exists())
-				dir.mkdirs();
-		}
-	}
+            if ( ! dir.exists())
+                dir.mkdirs();
+        }
+    }
 
     /**
      * Create a thread instance that will launch job when ressources are available (volumes)
@@ -141,15 +141,15 @@ public class K8sManager {
         }
     }
 
-	/**
-	 * Public submitter that prepare the K8sJob object and wait for the manager to be initied (in case of slow cluster)
-	 */
+    /**
+     * Public submitter that prepare the K8sJob object and wait for the manager to be initied (in case of slow cluster)
+     */
     public void submitter(List<String> cmd, String dockerImage, String jobID) {
-		while (init == false) {
-			try {
-				TimeUnit.MILLISECONDS.sleep(600);
-			} catch (InterruptedException e) {}
-		}
+        while (init == false) {
+            try {
+                TimeUnit.MILLISECONDS.sleep(600);
+            } catch (InterruptedException e) {}
+        }
 
         K8sJob exec = new K8sJob(jobID, workflowName, cmd, dockerImage, Arrays.asList(volume, sharedVolume));
         submitter(exec);
@@ -159,7 +159,7 @@ public class K8sManager {
         private Boolean ready = false;
         private DateTime startedTime;
 
-		@Override
+        @Override
         public void run() {
             try {
                 startedTime = DateTime.now();
@@ -203,7 +203,7 @@ public class K8sManager {
     public ArrayList<K8sJob> getUnfinishedJobs() { 
         ArrayList<K8sJob> copy = new ArrayList<K8sJob>(jobs);
 
-		System.err.println("voici les jobs non fini avant copi " + copy.toString());
+        System.err.println("voici les jobs non fini avant copi " + copy.toString());
         Iterator<K8sJob> it = copy.iterator();
         while (it.hasNext()) {
             if (it.next().isTerminated())

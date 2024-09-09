@@ -29,6 +29,7 @@ public class K8sOutputParser extends GaswOutputParser {
     @Override
     public GaswOutput getGaswOutput() throws GaswException {
         K8sJob job = manager.getJob(jobID);
+
         stdOut = getAppStdFile(GaswConstants.OUT_EXT, GaswConstants.OUT_ROOT);
         stdErr = getAppStdFile(GaswConstants.ERR_EXT, GaswConstants.ERR_ROOT);
 

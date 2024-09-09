@@ -36,9 +36,9 @@ public class K8sJob {
     private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
     private final K8sConfiguration 	conf;
 
-	private String					workflowName;
+    private String					workflowName;
     private String 					jobID;
-	private String					lowerJobID;
+    private String					lowerJobID;
     private String 					dockerImage;
     private List<String> 			command;
     private List<K8sVolume>         volumes;
@@ -60,23 +60,24 @@ public class K8sJob {
         this.command = command;
         this.dockerImage = dockerImage;
         this.volumes = volumes;
-		this.workflowName = workflowName;
+        this.workflowName = workflowName;
 
-		generateIDName(jobID);
+        generateIDName(jobID);
         V1Container ctn = createContainer(this.dockerImage, this.command);
         configure(ctn);
     }
 
-	private void generateIDName(String baseName) {
-		for (int i = baseName.length() - 1; i > 0; i--) {
-			if ( ! Character.isDigit(baseName.charAt(i))) {
-				lowerJobID = baseName.substring(i + 1, baseName.length());
-				break;
-			}
-		}
-		lowerJobID = workflowName.toLowerCase() + "-" + lowerJobID;
-		System.err.println("voici le nom generated ID NAME : " + lowerJobID);
-	}
+    private void generateIDName(String baseName) {
+        for (int i = baseName.length() - 1; i > 0; i--) {
+            if ( ! Character.isDigit(baseName.charAt(i))) {
+                lowerJobID = baseName.substring(i + 1, baseName.length());
+                break;
+            }
+        }
+
+        lowerJobID = workflowName.toLowerCase() + "-" + lowerJobID;
+        System.err.println("voici le nom generated ID NAME : " + lowerJobID);
+    }
 
     private List<V1Volume> getVolumes() {
         List<V1Volume> volumesConverted = new ArrayList<V1Volume>();
@@ -134,9 +135,9 @@ public class K8sJob {
         V1Container ctn = new V1Container()
                 .name(lowerJobID)
                 .image(dockerImage)
-				.securityContext(new V1SecurityContext()
-					.privileged(true)
-				)
+                .securityContext(new V1SecurityContext()
+                    .privileged(true)
+                )
                 .workingDir(K8sConstants.mountPathContainer + volumes.get(0).getName()) // may be to change
                 .volumeMounts(getVolumesMounts())
                 .command(getWrappedCommand());
@@ -156,17 +157,17 @@ public class K8sJob {
 
         wrappedCommand.set(last, redirectCmd + " bash " + wrappedCommand.get(last));
         System.err.println("voici la command original : " + command.toString());
-		System.err.println("voici la wrapped command : " + wrappedCommand.toString());
+        System.err.println("voici la wrapped command : " + wrappedCommand.toString());
 
-		// List<String> fixed = new ArrayList<String>();
-		// fixed.add("/bin/sh");
-		// fixed.add("-c");
-		// fixed.add("echo $PWD $UID $USER $PATH && docker --version");
-		// List<String> fixed = new ArrayList<String>();
-		// fixed.add("/bin/sh");
-		// fixed.add("-c");
-		// fixed.add("sleep 50000");
-		// return fixed;
+        // List<String> fixed = new ArrayList<String>();
+        // fixed.add("/bin/sh");
+        // fixed.add("-c");
+        // fixed.add("echo $PWD $UID $USER $PATH && docker --version");
+        // List<String> fixed = new ArrayList<String>();
+        // fixed.add("/bin/sh");
+        // fixed.add("-c");
+        // fixed.add("sleep 50000");
+        // return fixed;
         return wrappedCommand;
     }
 
