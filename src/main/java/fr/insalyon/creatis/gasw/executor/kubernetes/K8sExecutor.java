@@ -29,9 +29,9 @@ public class K8sExecutor implements ExecutorPlugin {
         conf.init(K8sConstants.pluginConfig);
         manager = new K8sManager(GaswConfiguration.getInstance().getSimulationID());
         manager.init();
+        K8sMonitor.getInstance().setManager(manager);
         
         k8sSubmit = new K8sSubmit(gaswInput, new K8sMinorStatusGenerator(), manager);
-        K8sMonitor.getInstance().setManager(manager);
     }
 
     @Override
@@ -50,7 +50,6 @@ public class K8sExecutor implements ExecutorPlugin {
         manager.destroy();
 
         // Gasw
-        // k8sSubmit.terminate();
-        K8sMonitor.finish();
+        K8sMonitor.getInstance().finish();
     }
 }

@@ -23,7 +23,7 @@ public class K8sMonitor extends GaswMonitor {
     
     private List<K8sJob>        finishedJobs;
     private boolean 			stop;
-
+    
     private K8sManager			manager;
 
     public synchronized static K8sMonitor getInstance() {
@@ -44,7 +44,6 @@ public class K8sMonitor extends GaswMonitor {
 
     private void statusChecker() {
         ArrayList<K8sJob> jobs = manager.getUnfinishedJobs();
-        Integer exitCode;
 
         System.err.println("ici je check le status " + jobs.toString());
         for (K8sJob j : jobs) {
@@ -62,7 +61,7 @@ public class K8sMonitor extends GaswMonitor {
     @Override
     public void run() {
         while (!stop) {
-            System.err.println("je suis dans cette boucle " + stop + "\n\n");
+            System.err.println("je fais le check des jobs en cours !");
             statusChecker();
             try {
                 while (hasFinishedJobs()) {
@@ -95,19 +94,18 @@ public class K8sMonitor extends GaswMonitor {
 
     @Override
     public synchronized void add(String jobID, String symbolicName, String fileName, String parameters) throws GaswException {
-
-        logger.info("Adding job: " + jobID);
         Job job = new Job(jobID, GaswConfiguration.getInstance().getSimulationID(),
-                GaswStatus.QUEUED, symbolicName, fileName, parameters,
-                K8sConstants.EXECUTOR_NAME);
-        add(job);
+            GaswStatus.QUEUED, symbolicName, fileName, parameters,
+            K8sConstants.EXECUTOR_NAME);
 
+        add(job);
+        logger.info("Adding job: " + jobID);
         try {
             job.setQueued(new Date());
             jobDAO.update(job);
+
         } catch (DAOException ex) {
             System.err.println(ex.getMessage());
-            // do nothing
         }
     }
 
@@ -126,9 +124,9 @@ public class K8sMonitor extends GaswMonitor {
         finishedJobs.add(job);
     }
 
-    public synchronized static void finish() {
+    public synchronized void finish() {
         if (instance != null) {
-            System.err.println("ICI QUELQUEN ARRET LA BOUCLe");
+            System.err.println("Monitor is off !");
             instance.stop = true;
             instance = null;
         }
@@ -142,7 +140,7 @@ public class K8sMonitor extends GaswMonitor {
             jobDAO.update(job);
             System.err.println("je viens de mettre à jour le job " + job.getId() + " sur le statut " + status.toString());
         } catch (DAOException e) {
-            System.err.println("ICI j'ai une dao exeception!");
+            System.err.println("ICI j'ai une dao exeception! " + e.getMessage());
         }
     }
 

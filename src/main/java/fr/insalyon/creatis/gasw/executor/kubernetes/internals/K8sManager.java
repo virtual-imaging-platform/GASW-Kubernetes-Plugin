@@ -10,6 +10,7 @@ import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
+import fr.insalyon.creatis.gasw.GaswConfiguration;
 import fr.insalyon.creatis.gasw.GaswConstants;
 import fr.insalyon.creatis.gasw.GaswException;
 import fr.insalyon.creatis.gasw.execution.GaswStatus;
@@ -202,7 +203,7 @@ public class K8sManager {
                     throw new GaswException("Volume wasn't eady in 2 minutes, aborting !");
                 else {
                     checker();
-                    TimeUnit.MILLISECONDS.sleep(600);
+                    Thread.sleep(GaswConfiguration.getInstance().getDefaultSleeptime());
                 }
             }
             while (end == false) {
@@ -214,7 +215,7 @@ public class K8sManager {
                         }
                     }
                 }
-                TimeUnit.MILLISECONDS.sleep(600);
+                Thread.sleep(GaswConfiguration.getInstance().getDefaultSleeptime());
             }
         }
 

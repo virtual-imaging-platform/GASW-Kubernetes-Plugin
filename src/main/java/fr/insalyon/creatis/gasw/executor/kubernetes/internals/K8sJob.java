@@ -7,8 +7,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
-import fr.insalyon.creatis.gasw.dao.DAOException;
-import fr.insalyon.creatis.gasw.dao.DAOFactory;
 import fr.insalyon.creatis.gasw.execution.GaswStatus;
 import fr.insalyon.creatis.gasw.executor.kubernetes.K8sMonitor;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
@@ -53,9 +51,6 @@ public class K8sJob {
     private boolean					terminated = false;
 
 
-    /**
-     * @param volumes -> the first volume correspond to the workingdir volume /workflow-xxxx/
-     */
     public K8sJob(String jobID, String workflowName) {
         conf = K8sConfiguration.getInstance();
         this.jobID = jobID;

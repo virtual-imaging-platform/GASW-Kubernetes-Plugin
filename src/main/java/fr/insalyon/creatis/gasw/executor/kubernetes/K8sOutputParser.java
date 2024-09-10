@@ -13,8 +13,9 @@ import fr.insalyon.creatis.gasw.executor.kubernetes.internals.K8sJob;
 import fr.insalyon.creatis.gasw.executor.kubernetes.internals.K8sManager;
 
 public class K8sOutputParser extends GaswOutputParser {
-
+    
     private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
+
     private File stdOut;
     private File stdErr;
     private K8sManager manager;

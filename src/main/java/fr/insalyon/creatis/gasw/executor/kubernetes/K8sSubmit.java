@@ -28,17 +28,18 @@ public class K8sSubmit extends GaswSubmit {
 
     @Override
     public String submit() throws GaswException {
-
+        String fileName = scriptName.substring(0, scriptName.lastIndexOf("."));
         StringBuilder params = new StringBuilder();
+
         for (String p : gaswInput.getParameters()) {
             params.append(p);
             params.append(" ");
         }
-        String fileName = scriptName.substring(0, scriptName.lastIndexOf("."));
+
         K8sMonitor.getInstance().add(fileName, gaswInput.getExecutableName(), fileName, params.toString());
         wrappedSubmit(fileName);
-
         logger.info("K8s Executor Job ID: " + fileName);
+
         return fileName;
     }
 
