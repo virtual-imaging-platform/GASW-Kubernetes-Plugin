@@ -50,7 +50,7 @@ public class K8sManager {
             checkOutputsDir();
             System.err.println("User ouputs directories checked !");
 
-            volume = new K8sVolume(conf, workflowName);
+            volume = new K8sVolume(conf, workflowName, "ReadWriteMany");
             volume.createPV();
             volume.createPVC();
             System.err.println("Workflow volume created !");
@@ -104,10 +104,10 @@ public class K8sManager {
      * Check if the /workflows/sharedata volume exist 
      */
     public void checkSharedVolume() throws ApiException {
-        K8sVolume sharedUserVolume = K8sVolume.retrieve("SharedData");
+        K8sVolume sharedUserVolume = K8sVolume.retrieve("SharedData", "ReadOnlyMany");
 
         if (sharedUserVolume == null) {
-            sharedUserVolume = new K8sVolume(K8sConfiguration.getInstance(), "SharedData");
+            sharedUserVolume = new K8sVolume(K8sConfiguration.getInstance(), "SharedData", "ReadOnlyMany");
 
             sharedUserVolume.createPV();
             sharedUserVolume.createPVC();

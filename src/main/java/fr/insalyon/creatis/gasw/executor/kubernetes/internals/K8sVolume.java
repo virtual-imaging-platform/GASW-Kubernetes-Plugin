@@ -25,10 +25,15 @@ public class K8sVolume {
     private V1PersistentVolume 		pv;
     private V1PersistentVolumeClaim pvc;
     private String 					name;
+    private String                  accessModes;
 
-    public K8sVolume(K8sConfiguration conf, String workflowName) {
+    /**
+     * @param accessPermissions : "ReadWriteMany" or "ReadOnlyMany"
+     */
+    public K8sVolume(K8sConfiguration conf, String workflowName, String accessModes) {
         this.conf = conf;
         this.name = workflowName;
+        this.accessModes = accessModes;
     }
 
     public String getName() { return name; }
@@ -47,7 +52,7 @@ public class K8sVolume {
         pv = new V1PersistentVolume()
             .metadata(new V1ObjectMeta().name(getIDName()))
             .spec(new V1PersistentVolumeSpec()
-                .accessModes(Arrays.asList("ReadWriteMany"))
+                .accessModes(Arrays.asList(accessModes))
                 .capacity(Map.of("storage", new Quantity("1Gi")))
                     .nfs(new V1NFSVolumeSource()
                     .path(getSubMountPath())
@@ -64,7 +69,7 @@ public class K8sVolume {
                 .storageClassName(K8sConstants.storageClassName)
                 .resources(new V1VolumeResourceRequirements()
                         .requests(Map.of("storage", new Quantity("1Gi"))))
-                .addAccessModesItem("ReadWriteMany")
+                .addAccessModesItem(accessModes)
                 .volumeName(getIDName()));
 
         conf.getK8sCoreApi().createNamespacedPersistentVolumeClaim(conf.getK8sNamespace(), pvc).execute();
@@ -105,12 +110,12 @@ public class K8sVolume {
         }
     }
 
-    public static K8sVolume retrieve(String volumeName) {
+    public static K8sVolume retrieve(String volumeName, String accessModes) {
         K8sConfiguration conf = K8sConfiguration.getInstance();
         CoreV1Api api = conf.getK8sCoreApi();
 
         try {
-            K8sVolume volume = new K8sVolume(conf, volumeName);
+            K8sVolume volume = new K8sVolume(conf, volumeName, accessModes);
             V1PersistentVolume pv = api.readPersistentVolume(volume.getIDName()).execute();
             V1PersistentVolumeClaim pvc = api.readNamespacedPersistentVolumeClaim(volume.getClaimName(), conf.getK8sNamespace()).execute();
 
