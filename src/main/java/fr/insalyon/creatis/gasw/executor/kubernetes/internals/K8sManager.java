@@ -4,7 +4,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
@@ -14,6 +13,7 @@ import org.joda.time.Duration;
 import fr.insalyon.creatis.gasw.GaswConstants;
 import fr.insalyon.creatis.gasw.GaswException;
 import fr.insalyon.creatis.gasw.execution.GaswStatus;
+import fr.insalyon.creatis.gasw.executor.kubernetes.K8sMonitor;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConstants;
 import io.kubernetes.client.openapi.ApiException;
@@ -65,8 +65,10 @@ public class K8sManager {
         end = true;
 
         try {
-            volume.deletePVC();
-            volume.deletePV();
+            if (this.volume != null)
+                volume.deletePVC();
+            if (this.volume != null)
+                volume.deletePV();
             
             /* hard cleaning not prod */
             for (K8sJob job : jobs) { job.clean(); }
@@ -154,10 +156,9 @@ public class K8sManager {
                 break;
             } else if (i == K8sConstants.maxRetryToPush) {
                 synchronized (this) {
-                    jobs.add(exec);
+                    K8sMonitor.getInstance().addFinishedJob(exec);
                 }
-                exec.setCancelled();
-                
+                exec.setStatus(GaswStatus.CANCELLED);
                 return ;
             } else {
                 try {
@@ -168,6 +169,7 @@ public class K8sManager {
             i++;
         }
 
+        System.err.println("j'ai fait le submitter du job");
         exec.setCommand(cmd);
         exec.setImage(dockerImage);
         exec.setVolumes(Arrays.asList(volume, sharedVolume));
@@ -207,6 +209,7 @@ public class K8sManager {
                 synchronized (this) {
                     for (K8sJob exec : jobs) {
                         if (exec.getStatus() == GaswStatus.NOT_SUBMITTED) {
+                            exec.setStatus(GaswStatus.QUEUED);
                             exec.start();
                         }
                     }

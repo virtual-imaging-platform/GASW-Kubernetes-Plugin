@@ -7,7 +7,10 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
+import fr.insalyon.creatis.gasw.dao.DAOException;
+import fr.insalyon.creatis.gasw.dao.DAOFactory;
 import fr.insalyon.creatis.gasw.execution.GaswStatus;
+import fr.insalyon.creatis.gasw.executor.kubernetes.K8sMonitor;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConstants;
 import io.kubernetes.client.openapi.ApiException;
@@ -46,9 +49,10 @@ public class K8sJob {
     private V1Job 					job;
     private V1Container             container;
 
-    private boolean 				submited = false;
+    private GaswStatus              status;
+    // private boolean 				submited = false;
     private boolean					terminated = false;
-    private boolean                 cancelled = false;
+    // private boolean                 cancelled = false;
 
 
     /**
@@ -61,6 +65,7 @@ public class K8sJob {
         conf = K8sConfiguration.getInstance();
         this.jobID = jobID;
         this.workflowName = workflowName;
+        this.status = GaswStatus.UNDEFINED;
 
         generateIDName(jobID);
 
@@ -164,10 +169,12 @@ public class K8sJob {
         job = new V1Job()
             .spec(jobSpec)
             .metadata(meta);
+        setStatus(GaswStatus.NOT_SUBMITTED);
     }
 
+    public void setStatus(GaswStatus status) { this.status = status; }
+
     public void setTerminated() { terminated = true; }
-    public void setCancelled() { cancelled = true; }
 
     public boolean isTerminated() { return terminated; }
 
@@ -198,7 +205,8 @@ public class K8sJob {
             logger.error("Impossible to start job value is null");
         } else {
             api.createNamespacedJob(conf.getK8sNamespace(), job).execute();
-            submited = true;
+            K8sMonitor.getInstance().updateJob(getJobID(), GaswStatus.RUNNING);
+            setStatus(GaswStatus.SUCCESSFULLY_SUBMITTED);
         }
     }
 
@@ -228,14 +236,15 @@ public class K8sJob {
     public GaswStatus getStatus() {
         BatchV1Api api = conf.getK8sBatchApi();
 
-        if (cancelled == true)
+        if (status == GaswStatus.CANCELLED)
             return GaswStatus.CANCELLED;
         if (job != null) {
-            if (submited == false)
-                return GaswStatus.NOT_SUBMITTED;
+            if (status == GaswStatus.NOT_SUBMITTED)
+                return status;
             try {
                 V1Job updatedJob = api.readNamespacedJob(job.getMetadata().getName(), conf.getK8sNamespace()).execute();
                 V1JobStatus status = updatedJob.getStatus();
+
                 if (status.getFailed() != null && status.getFailed() > 0)
                     return GaswStatus.ERROR;
                 else if (status.getActive() != null && status.getActive() > 0)
@@ -260,6 +269,8 @@ public class K8sJob {
         CoreV1Api coreApi = conf.getK8sCoreApi();
         String jobName = job.getMetadata().getName();
 
+        if (job == null)
+            return 1;
         try {
             V1PodList podsList = coreApi.listNamespacedPod(conf.getK8sNamespace()).labelSelector("job-name=" + jobName).execute();
             V1Pod pod = podsList.getItems().get(0);

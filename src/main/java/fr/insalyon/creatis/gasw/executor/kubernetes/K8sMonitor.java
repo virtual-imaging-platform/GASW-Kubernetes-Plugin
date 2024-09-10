@@ -2,6 +2,7 @@ package fr.insalyon.creatis.gasw.executor.kubernetes;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
@@ -19,6 +20,8 @@ public class K8sMonitor extends GaswMonitor {
 
     private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
     private static K8sMonitor 	instance;
+    
+    private List<K8sJob>        finishedJobs;
     private boolean 			stop;
 
     private K8sManager			manager;
@@ -35,6 +38,7 @@ public class K8sMonitor extends GaswMonitor {
 
     private K8sMonitor() {
         super();
+        finishedJobs = new ArrayList<K8sJob>();
         stop = false;
     }
 
@@ -45,14 +49,11 @@ public class K8sMonitor extends GaswMonitor {
         System.err.println("ici je check le status " + jobs.toString());
         for (K8sJob j : jobs) {
             GaswStatus stus = j.getStatus();
-            if (stus != GaswStatus.RUNNING && stus != GaswStatus.QUEUED && stus != GaswStatus.RESCHEDULE && stus != GaswStatus.NOT_SUBMITTED) {
-                if (j.getStatus() == GaswStatus.CANCELLED)
-                    exitCode = 1;
-                else
-                    exitCode = j.getExitCode();
 
+            System.err.println("voici le status : " + stus.toString());
+            if (stus != GaswStatus.RUNNING && stus != GaswStatus.QUEUED && stus != GaswStatus.UNDEFINED && stus != GaswStatus.NOT_SUBMITTED) {
                 j.setTerminated();
-                K8sSubmit.addFinishedJob(j.getJobID(), exitCode);
+                finishedJobs.add(j);
                 System.err.println("le job est terminé");
             }
         }
@@ -64,17 +65,19 @@ public class K8sMonitor extends GaswMonitor {
             System.err.println("je suis dans cette boucle " + stop + "\n\n");
             statusChecker();
             try {
-                while (K8sSubmit.hasFinishedJobs()) {
-                    String[] s = K8sSubmit.pullFinishedJobID().split("--");
-                    Job job = jobDAO.getJobByID(s[0]);
-
-                    job.setExitCode(Integer.parseInt(s[1]));
-
-                    if (job.getExitCode() == 0) {
-                        job.setStatus(GaswStatus.COMPLETED);
+                while (hasFinishedJobs()) {
+                    K8sJob kJob = pullFinishedJobID();
+                    GaswStatus status = kJob.getStatus();
+                    Job job = jobDAO.getJobByID(kJob.getJobID());
+                    
+                    if (status == GaswStatus.ERROR || status == GaswStatus.COMPLETED) {
+                        job.setExitCode(kJob.getExitCode());
+                        job.setStatus(job.getExitCode() == 0 ? GaswStatus.COMPLETED : GaswStatus.ERROR);
                     } else {
-                        job.setStatus(GaswStatus.ERROR);
+                        job.setStatus(status);
                     }
+                    System.err.println("voici le statut final " + job.getStatus());
+                    
                     jobDAO.update(job);
                     new K8sOutputParser(job.getId(), manager).start();
                 }
@@ -99,24 +102,47 @@ public class K8sMonitor extends GaswMonitor {
                 K8sConstants.EXECUTOR_NAME);
         add(job);
 
-        // Queued Time
         try {
             job.setQueued(new Date());
             jobDAO.update(job);
         } catch (DAOException ex) {
+            System.err.println(ex.getMessage());
             // do nothing
         }
     }
 
-    public synchronized void terminate() {
-        System.err.println("ICI QUELQUEN ARRET LA BOUCLe");
-        stop = true;
-        instance = null;
+    public K8sJob pullFinishedJobID() {
+        K8sJob lastJob = finishedJobs.get(0);
+
+        finishedJobs.remove(lastJob);
+        return lastJob;
     }
 
-    public static void finish() {
+    public boolean hasFinishedJobs() {
+        return ! finishedJobs.isEmpty();
+    }
+
+    public void addFinishedJob(K8sJob job) {
+        finishedJobs.add(job);
+    }
+
+    public synchronized static void finish() {
         if (instance != null) {
-            instance.terminate();
+            System.err.println("ICI QUELQUEN ARRET LA BOUCLe");
+            instance.stop = true;
+            instance = null;
+        }
+    }
+
+    public void updateJob(String jobID, GaswStatus status) {
+        try {
+            var job = jobDAO.getJobByID(jobID);
+
+            job.setStatus(status);
+            jobDAO.update(job);
+            System.err.println("je viens de mettre à jour le job " + job.getId() + " sur le statut " + status.toString());
+        } catch (DAOException e) {
+            System.err.println("ICI j'ai une dao exeception!");
         }
     }
 

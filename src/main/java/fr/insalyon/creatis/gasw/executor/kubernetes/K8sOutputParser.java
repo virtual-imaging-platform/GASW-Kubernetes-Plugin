@@ -28,36 +28,36 @@ public class K8sOutputParser extends GaswOutputParser {
 
     @Override
     public GaswOutput getGaswOutput() throws GaswException {
+        GaswExitCode gaswExitCode = GaswExitCode.EXECUTION_CANCELED;
         K8sJob job = manager.getJob(jobID);
+        int exitCode;
 
         stdOut = getAppStdFile(GaswConstants.OUT_EXT, GaswConstants.OUT_ROOT);
         stdErr = getAppStdFile(GaswConstants.ERR_EXT, GaswConstants.ERR_ROOT);
 
-        if (job == null)
-            throw new GaswException("Job do not exist ! (output parser)");
-
         moveProvenanceFile(".");
 
-        int exitCode = parseStdOut(stdOut);
-        exitCode = parseStdErr(stdErr, exitCode);
-
-        GaswExitCode gaswExitCode = GaswExitCode.UNDEFINED;
-        switch (exitCode) {
-            case 0:
-                gaswExitCode = GaswExitCode.SUCCESS;
-                break;
-            case 1:
-                gaswExitCode = GaswExitCode.ERROR_READ_GRID;
-                break;
-            case 2:
-                gaswExitCode = GaswExitCode.ERROR_WRITE_GRID;
-                break;
-            case 6:
-                gaswExitCode = GaswExitCode.EXECUTION_FAILED;
-                break;
-            case 7:
-                gaswExitCode = GaswExitCode.ERROR_WRITE_LOCAL;
-                break;
+        if (job != null) {
+            exitCode = parseStdOut(stdOut);
+            exitCode = parseStdErr(stdErr, exitCode);
+    
+            switch (exitCode) {
+                case 0:
+                    gaswExitCode = GaswExitCode.SUCCESS;
+                    break;
+                case 1:
+                    gaswExitCode = GaswExitCode.ERROR_READ_GRID;
+                    break;
+                case 2:
+                    gaswExitCode = GaswExitCode.ERROR_WRITE_GRID;
+                    break;
+                case 6:
+                    gaswExitCode = GaswExitCode.EXECUTION_FAILED;
+                    break;
+                case 7:
+                    gaswExitCode = GaswExitCode.ERROR_WRITE_LOCAL;
+                    break;
+            }
         }
 
         return new GaswOutput(jobID, gaswExitCode, "", uploadedResults,

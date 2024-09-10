@@ -21,7 +21,6 @@ import fr.insalyon.creatis.gasw.executor.kubernetes.internals.K8sManager;
 public class K8sSubmit extends GaswSubmit {
 
     private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
-    private static List<String> finishedJobs = new ArrayList<String>();
     private K8sManager 			manager;
 
     public K8sSubmit(GaswInput gaswInput, K8sMinorStatusGenerator minorStatusServiceGenerator, K8sManager manager) throws GaswException {
@@ -51,7 +50,7 @@ public class K8sSubmit extends GaswSubmit {
             // GAWS DAO
             JobDAO jobDAO = DAOFactory.getDAOFactory().getJobDAO();
             Job job = jobDAO.getJobByID(jobID);
-            job.setStatus(GaswStatus.RUNNING);
+            job.setStatus(GaswStatus.QUEUED);
             job.setDownload(new Date());
             jobDAO.update(job);
 
@@ -62,24 +61,6 @@ public class K8sSubmit extends GaswSubmit {
         } catch (DAOException e) {
             logger.error(e.getStackTrace());
             throw new GaswException("Failed to submit the job (wrapped command)");
-        }
-    }
-
-    public synchronized static void addFinishedJob(String jobId, Integer exitValue) {
-        finishedJobs.add(jobId + "--" + exitValue);
-    }
-
-    public synchronized static String pullFinishedJobID() {
-        String jobID = finishedJobs.get(0);
-        finishedJobs.remove(jobID);
-        return jobID;
-    }
-
-    public synchronized static boolean hasFinishedJobs() {
-        if (finishedJobs.size() > 0) {
-            return true;
-        } else {
-            return false;
         }
     }
 }

@@ -73,13 +73,15 @@ public class K8sVolume {
     public void deletePVC() throws ApiException {
         CoreV1Api api = conf.getK8sCoreApi();
 
-        api.deleteNamespacedPersistentVolumeClaim(getClaimName(), conf.getK8sNamespace()).execute();
+        if (pvc != null)
+            api.deleteNamespacedPersistentVolumeClaim(getClaimName(), conf.getK8sNamespace()).execute();
     }
 
     public void deletePV() throws ApiException {
         CoreV1Api api = conf.getK8sCoreApi();
 
-        api.deletePersistentVolume(getIDName()).execute();
+        if (pv != null)
+            api.deletePersistentVolume(getIDName()).execute();
     }
 
     /**

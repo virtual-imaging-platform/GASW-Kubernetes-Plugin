@@ -51,6 +51,6 @@ public class K8sExecutor implements ExecutorPlugin {
 
         // Gasw
         // k8sSubmit.terminate();
-        K8sMonitor.getInstance().terminate();
+        K8sMonitor.finish();
     }
 }
