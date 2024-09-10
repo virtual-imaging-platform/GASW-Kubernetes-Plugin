@@ -41,7 +41,7 @@ public class K8sJob {
 
     private String					workflowName;
     private String 					jobID;
-    private String					lowerJobID;
+    private String					kubernetesJobID;
 
     private String       			command;
     private List<K8sVolume>         volumes;
@@ -50,15 +50,10 @@ public class K8sJob {
     private V1Container             container;
 
     private GaswStatus              status;
-    // private boolean 				submited = false;
     private boolean					terminated = false;
-    // private boolean                 cancelled = false;
 
 
     /**
-     * @param jobID
-     * @param command
-     * @param dockerImage
      * @param volumes -> the first volume correspond to the workingdir volume /workflow-xxxx/
      */
     public K8sJob(String jobID, String workflowName) {
@@ -70,20 +65,20 @@ public class K8sJob {
         generateIDName(jobID);
 
         this.container = new V1Container()
-            .name(lowerJobID)    
+            .name(kubernetesJobID)    
             .securityContext(new V1SecurityContext().privileged(true));
     }
 
     private void generateIDName(String baseName) {
         for (int i = baseName.length() - 1; i > 0; i--) {
             if ( ! Character.isDigit(baseName.charAt(i))) {
-                lowerJobID = baseName.substring(i + 1, baseName.length());
+                kubernetesJobID = baseName.substring(i + 1, baseName.length());
                 break;
             }
         }
 
-        lowerJobID = workflowName.toLowerCase() + "-" + lowerJobID;
-        System.err.println("voici le nom generated ID NAME : " + lowerJobID);
+        kubernetesJobID = workflowName.toLowerCase() + "-" + kubernetesJobID;
+        System.err.println("voici le nom generated ID NAME : " + kubernetesJobID);
     }
 
      /**
@@ -124,7 +119,7 @@ public class K8sJob {
 
         for (K8sVolume vol : volumes) {
             V1Volume item = new V1Volume()
-                .name(vol.getIDName())
+                .name(vol.getKubernetesName())
                 .persistentVolumeClaim(new V1PersistentVolumeClaimVolumeSource()
                     .claimName(vol.getClaimName()));
 
@@ -138,7 +133,7 @@ public class K8sJob {
 
         for (K8sVolume vol : volumes) {
             V1VolumeMount item = new V1VolumeMount()
-                .name(vol.getIDName())
+                .name(vol.getKubernetesName())
                 .mountPath(K8sConstants.mountPathContainer + vol.getName());
 
             volumesMounts.add(item);
@@ -152,7 +147,7 @@ public class K8sJob {
      * @param container
      */
     public void configure() {
-        V1ObjectMeta meta = new V1ObjectMeta().name(lowerJobID).namespace(conf.getK8sNamespace());
+        V1ObjectMeta meta = new V1ObjectMeta().name(kubernetesJobID).namespace(conf.getK8sNamespace());
 
         V1PodSpec podSpec = new V1PodSpec()
             .containers(Arrays.asList(container))

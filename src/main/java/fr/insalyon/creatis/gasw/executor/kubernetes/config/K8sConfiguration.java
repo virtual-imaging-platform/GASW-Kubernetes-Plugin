@@ -71,6 +71,7 @@ public class K8sConfiguration {
             k8sNamespace = map.get("k8s_namespace").toString();
             nfsAddress = map.get("nfs_address").toString();
             nfsPath = map.get("nfs_path").toString();
+
             logger.info("Configuration file was loaded successfully !");
         } catch (IOException e) {
             logger.error(e.getStackTrace(), e);
@@ -82,6 +83,7 @@ public class K8sConfiguration {
         k8sCoreApi = new CoreV1Api(client);
         k8sBatchApi =  new BatchV1Api(client);
         k8sStorageApi = new StorageV1Api(client);
+
         logger.info("Apis were defined successffully");
     }
     

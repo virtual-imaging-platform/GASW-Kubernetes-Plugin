@@ -37,20 +37,20 @@ public class K8sVolume {
     }
 
     public String getName() { return name; }
-    public String getClaimName() { return getIDName() + "-claim"; }
+    public String getClaimName() { return getKubernetesName() + "-claim"; }
     public String getSubMountPath() { return conf.getNFSPath() + getName() + "/"; } 
 
     /**
      * This function return in lowercase to conform to RFC 1123 (volume name)
      */
-    public String getIDName() {
+    public String getKubernetesName() {
         return name.toLowerCase();
     }
     
     public void createPV () throws ApiException {
-        System.err.println("Volume creation submitted for " + getIDName());
+        System.err.println("Volume creation submitted for " + getKubernetesName());
         pv = new V1PersistentVolume()
-            .metadata(new V1ObjectMeta().name(getIDName()))
+            .metadata(new V1ObjectMeta().name(getKubernetesName()))
             .spec(new V1PersistentVolumeSpec()
                 .accessModes(Arrays.asList(accessModes))
                 .capacity(Map.of("storage", new Quantity("1Gi")))
@@ -70,7 +70,7 @@ public class K8sVolume {
                 .resources(new V1VolumeResourceRequirements()
                         .requests(Map.of("storage", new Quantity("1Gi"))))
                 .addAccessModesItem(accessModes)
-                .volumeName(getIDName()));
+                .volumeName(getKubernetesName()));
 
         conf.getK8sCoreApi().createNamespacedPersistentVolumeClaim(conf.getK8sNamespace(), pvc).execute();
     }
@@ -86,7 +86,7 @@ public class K8sVolume {
         CoreV1Api api = conf.getK8sCoreApi();
 
         if (pv != null)
-            api.deletePersistentVolume(getIDName()).execute();
+            api.deletePersistentVolume(getKubernetesName()).execute();
     }
 
     /**
@@ -97,7 +97,7 @@ public class K8sVolume {
         CoreV1Api api = conf.getK8sCoreApi();
         
         try {
-            V1PersistentVolume requestPv = api.readPersistentVolume(getIDName()).execute();
+            V1PersistentVolume requestPv = api.readPersistentVolume(getKubernetesName()).execute();
             V1PersistentVolumeClaim requestPvc = api.readNamespacedPersistentVolumeClaim(getClaimName(), conf.getK8sNamespace()).execute();
         
             System.err.println(requestPv.getStatus().getPhase() + " | " + requestPvc.getStatus().getPhase());
@@ -116,7 +116,7 @@ public class K8sVolume {
 
         try {
             K8sVolume volume = new K8sVolume(conf, volumeName, accessModes);
-            V1PersistentVolume pv = api.readPersistentVolume(volume.getIDName()).execute();
+            V1PersistentVolume pv = api.readPersistentVolume(volume.getKubernetesName()).execute();
             V1PersistentVolumeClaim pvc = api.readNamespacedPersistentVolumeClaim(volume.getClaimName(), conf.getK8sNamespace()).execute();
 
             volume.pv = pv;
