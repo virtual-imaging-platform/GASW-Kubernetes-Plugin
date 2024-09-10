@@ -163,14 +163,13 @@ public class K8sManager {
                 return ;
             } else {
                 try {
-                    System.err.println("JE SUIS DANS LATTENTE");
+                    System.err.println("[ATTENTE] Manager pas encore Init");
                     TimeUnit.MILLISECONDS.sleep(10000);
                 } catch (InterruptedException e) {}
             }
             i++;
         }
 
-        System.err.println("j'ai fait le submitter du job");
         exec.setCommand(cmd);
         exec.setImage(dockerImage);
         exec.setVolumes(Arrays.asList(volume, sharedVolume));
@@ -228,7 +227,7 @@ public class K8sManager {
     public ArrayList<K8sJob> getUnfinishedJobs() { 
         ArrayList<K8sJob> copy = new ArrayList<K8sJob>(jobs);
 
-        System.err.println("voici les jobs non fini avant copi " + copy.toString());
+        System.err.println("[BEFORE-COPY] " + copy.toString());
         Iterator<K8sJob> it = copy.iterator();
         while (it.hasNext()) {
             if (it.next().isTerminated())

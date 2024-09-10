@@ -73,7 +73,6 @@ public class K8sJob {
         }
 
         kubernetesJobID = workflowName.toLowerCase() + "-" + kubernetesJobID;
-        System.err.println("voici le nom generated ID NAME : " + kubernetesJobID);
     }
 
      /**
@@ -90,8 +89,8 @@ public class K8sJob {
         wrappedCommand.add(0, "bash");
         wrappedCommand.add(1, "-c");
         wrappedCommand.add(2, redirectCmd + " " + command);
-        System.err.println("voici la command original : " + command.toString());
-        System.err.println("voici la wrapped command : " + wrappedCommand.toString());
+        // System.err.println("voici la command original : " + command.toString());
+        // System.err.println("voici la wrapped command : " + wrappedCommand.toString());
 
         // List<String> fixed = new ArrayList<String>();
         // fixed.add("/bin/sh");
@@ -248,7 +247,6 @@ public class K8sJob {
                 return GaswStatus.CANCELLED;
             }
         }
-        System.err.println("ICI JE NE PEUX PAS RECUPERER LETAT DU JOB BIS");
         return GaswStatus.UNDEFINED;
     }
 

@@ -45,15 +45,13 @@ public class K8sMonitor extends GaswMonitor {
     private void statusChecker() {
         ArrayList<K8sJob> jobs = manager.getUnfinishedJobs();
 
-        System.err.println("ici je check le status " + jobs.toString());
         for (K8sJob j : jobs) {
             GaswStatus stus = j.getStatus();
 
-            System.err.println("voici le status : " + stus.toString());
+            System.err.println("job : " + j.getJobID() + " : " + stus.toString());
             if (stus != GaswStatus.RUNNING && stus != GaswStatus.QUEUED && stus != GaswStatus.UNDEFINED && stus != GaswStatus.NOT_SUBMITTED) {
                 j.setTerminated();
                 finishedJobs.add(j);
-                System.err.println("le job est terminé");
             }
         }
     }
@@ -75,7 +73,7 @@ public class K8sMonitor extends GaswMonitor {
                     } else {
                         job.setStatus(status);
                     }
-                    System.err.println("voici le statut final " + job.getStatus());
+                    System.err.println("job : " + kJob.getJobID() + " final : " + job.getStatus());
                     
                     jobDAO.update(job);
                     new K8sOutputParser(job.getId(), manager).start();

@@ -14,8 +14,9 @@ import net.xeoh.plugins.base.annotations.PluginImplementation;
 @PluginImplementation
 public class K8sExecutor implements ExecutorPlugin {
 
-    private K8sSubmit k8sSubmit;
-    private K8sManager manager;
+    private K8sSubmit   k8sSubmit;
+    private K8sManager  manager;
+    private boolean     loaded = false;
 
     @Override
     public String getName() {
@@ -24,12 +25,16 @@ public class K8sExecutor implements ExecutorPlugin {
 
     @Override
     public void load(GaswInput gaswInput) throws GaswException {
-        K8sConfiguration conf = K8sConfiguration.getInstance();
+        if ( ! loaded) {
+            K8sConfiguration conf = K8sConfiguration.getInstance();
 
-        conf.init(K8sConstants.pluginConfig);
-        manager = new K8sManager(GaswConfiguration.getInstance().getSimulationID());
-        manager.init();
-        K8sMonitor.getInstance().setManager(manager);
+            conf.init(K8sConstants.pluginConfig);
+            manager = new K8sManager(GaswConfiguration.getInstance().getSimulationID());
+            manager.init();
+
+            K8sMonitor.getInstance().setManager(manager);
+            loaded = true;
+        }
         
         k8sSubmit = new K8sSubmit(gaswInput, new K8sMinorStatusGenerator(), manager);
     }
