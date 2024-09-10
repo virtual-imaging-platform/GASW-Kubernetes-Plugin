@@ -219,7 +219,7 @@ public class K8sJob {
      * @throws ApiException
      */
     public void clean() throws ApiException {
-        if (job != null && getStatus() == GaswStatus.COMPLETED)
+        if (job != null && isTerminated())
             kill();
     }
 
@@ -244,10 +244,11 @@ public class K8sJob {
                 else
                     return GaswStatus.QUEUED;
             } catch (ApiException e) {
-                logger.trace("Impossible de récuperer l'état du job" + e.getStackTrace());
-                return GaswStatus.UNDEFINED;
+                logger.info("Impossible de récuperer l'état du job" + e.getStackTrace());
+                return GaswStatus.CANCELLED;
             }
         }
+        System.err.println("ICI JE NE PEUX PAS RECUPERER LETAT DU JOB BIS");
         return GaswStatus.UNDEFINED;
     }
 
