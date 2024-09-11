@@ -15,6 +15,7 @@ import fr.insalyon.creatis.gasw.execution.GaswStatus;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConstants;
 import fr.insalyon.creatis.gasw.executor.kubernetes.internals.K8sJob;
 import fr.insalyon.creatis.gasw.executor.kubernetes.internals.K8sManager;
+import io.kubernetes.client.openapi.ApiException;
 
 public class K8sMonitor extends GaswMonitor {
 
@@ -147,7 +148,17 @@ public class K8sMonitor extends GaswMonitor {
     }
 
     @Override
-    protected void kill(Job job) {}
+    protected void kill(Job job) {
+        K8sJob kJob = manager.getJob(job.getId());
+
+        if (kJob == null)
+            return ;
+        try {
+            kJob.kill();
+        } catch (ApiException e) {
+            System.err.println("Failed to kill the job : " + job.getId() + "; Cause " + e.getMessage());
+        }
+    }
 
     @Override
     protected void reschedule(Job job) {}

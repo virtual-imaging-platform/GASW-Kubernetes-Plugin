@@ -31,9 +31,6 @@ import io.kubernetes.client.openapi.models.V1SecurityContext;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
 
-/**
- * K8sExecutor
- */
 public class K8sJob {
     private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
     private final K8sConfiguration 	conf;
@@ -58,21 +55,54 @@ public class K8sJob {
         this.workflowName = workflowName;
         this.status = GaswStatus.UNDEFINED;
 
-        generateIDName(jobID);
+        setKubernetesJobID(jobID);
 
         this.container = new V1Container()
             .name(kubernetesJobID)    
             .securityContext(new V1SecurityContext().privileged(true));
     }
 
-    private void generateIDName(String baseName) {
+    public String getJobID() {
+        return jobID;
+    }
+
+    public void setStatus(GaswStatus status) {
+        this.status = status;
+    }
+
+    public void setTerminated() {
+        terminated = true;
+    }
+
+    public boolean isTerminated() {
+        return terminated;
+    }
+
+    public void setVolumes(List<K8sVolume> volumes) {
+        this.volumes = volumes;
+        container.volumeMounts(getVolumesMounts());
+    }
+
+    public void setImage(String image) {
+        container.image(image);
+    }
+
+    public void setCommand(String command) {
+        this.command = command;
+        container.command(getWrappedCommand());
+    }
+
+    public void setWorkingDir(String workingDir) {
+        container.workingDir(workingDir);
+    }
+
+    private void setKubernetesJobID(String baseName) {
         for (int i = baseName.length() - 1; i > 0; i--) {
             if ( ! Character.isDigit(baseName.charAt(i))) {
                 kubernetesJobID = baseName.substring(i + 1, baseName.length());
                 break;
             }
         }
-
         kubernetesJobID = workflowName.toLowerCase() + "-" + kubernetesJobID;
     }
 
@@ -157,7 +187,7 @@ public class K8sJob {
 
     /**
      * This create the V1Job item and configure alls specs
-     * @apiNote Can be easilly upgrade to List<V1Container>
+     * @apiNote Can be easilly upgraded to List<V1Container>
      * @param container
      */
     public void configure() {
@@ -181,37 +211,15 @@ public class K8sJob {
         setStatus(GaswStatus.NOT_SUBMITTED);
     }
 
-    public void setStatus(GaswStatus status) { this.status = status; }
-
-    public void setTerminated() { terminated = true; }
-
-    public boolean isTerminated() { return terminated; }
-
-    public String getJobID() { return jobID; }
-
-    public void setVolumes(List<K8sVolume> volumes) {
-        this.volumes = volumes;
-        container.volumeMounts(getVolumesMounts());
-    }
-
-    public void setImage(String image) {
-        container.image(image);
-    }
-
-    public void setCommand(String command) {
-        this.command = command;
-        container.command(getWrappedCommand());
-    }
-
-    public void setWorkingDir(String workingDir) {
-        container.workingDir(workingDir);
-    }
-
+    /**
+     * Send the request against the kubernetes cluster to create the job
+     * @throws ApiException
+     */
     public void start() throws ApiException {
         BatchV1Api api = conf.getK8sBatchApi();
 
         if (job == null) {
-            logger.error("Impossible to start job value is null");
+            logger.error("Impossible to start job value is null (may not be configured)");
         } else {
             api.createNamespacedJob(conf.getK8sNamespace(), job).execute();
             setStatus(GaswStatus.SUCCESSFULLY_SUBMITTED);
@@ -225,6 +233,8 @@ public class K8sJob {
     public void kill() throws ApiException {
         BatchV1Api api = conf.getK8sBatchApi();
 
+        if (status == GaswStatus.NOT_SUBMITTED)
+            return ;
         if (job != null) {
             api.deleteNamespacedJob(job.getMetadata().getName(), conf.getK8sNamespace())
                 .propagationPolicy("Foreground").execute();
@@ -241,6 +251,10 @@ public class K8sJob {
             kill();
     }
 
+    /**
+     * @apiNote The function retry X times with a sleep of Y depending on K8sConstants.
+     * @return GaswStatus.UNDEFINED means that the job weren't configured
+     */
     public GaswStatus getStatus() {
         BatchV1Api api = conf.getK8sBatchApi();
         GaswStatus retrivedStatus;
@@ -264,7 +278,6 @@ public class K8sJob {
 
     /**
      * @implNote Should be adapted if multiple containers / pods per job
-     * @return
      */
     public Integer getExitCode() {
         CoreV1Api coreApi = conf.getK8sCoreApi();
@@ -284,17 +297,6 @@ public class K8sJob {
             return 0;
         } catch (Exception e) {
             return 1;
-        }
-    }
-
-    /**
-     * Develop function purpose (blocking)
-     * @throws InterruptedException
-     */
-    public void waitForCompletion() throws InterruptedException {
-        if (job != null) {
-            while (getStatus() != GaswStatus.COMPLETED)
-                TimeUnit.MILLISECONDS.sleep(200);
         }
     }
 }
