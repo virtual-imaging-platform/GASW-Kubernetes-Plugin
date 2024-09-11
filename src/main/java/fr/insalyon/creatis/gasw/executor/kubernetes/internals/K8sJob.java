@@ -257,7 +257,7 @@ public class K8sJob {
      */
     public GaswStatus getStatus() {
         BatchV1Api api = conf.getK8sBatchApi();
-        GaswStatus retrivedStatus;
+        GaswStatus retrievedStatus;
 
         if (status == GaswStatus.STALLED)
             return status;
@@ -265,10 +265,10 @@ public class K8sJob {
             if (status == GaswStatus.NOT_SUBMITTED)
                 return status;
             for (int i = 0; i < K8sConstants.statusRetry; i++) {
-                retrivedStatus = getStatusRequest(api);
+                retrievedStatus = getStatusRequest(api);
 
-                if (retrivedStatus != GaswStatus.UNDEFINED)
-                    return retrivedStatus;
+                if (retrievedStatus != GaswStatus.UNDEFINED)
+                    return retrievedStatus;
                 Utils.sleepNException(K8sConstants.statusRetryWait);
             }
             return GaswStatus.STALLED;

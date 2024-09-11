@@ -7,9 +7,11 @@ public class K8sConstants {
     public static String pluginConfig = "/var/www/cgi-bin/kubernetes/config.json"; 
     public static String storageClassName = "";
     public static String mountPathContainer = "/var/www/html/workflows/";
+
     public static int ttlJob = 500;
     public static int statusRetry = 5;
     public static int statusRetryWait = 2000; /* value in millis */
+
     public static int maxRetryToPush = 5; /* 10 seconds between each try */
 
     // GASW

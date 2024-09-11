@@ -121,7 +121,7 @@ public class K8sMonitor extends GaswMonitor {
         return ! finishedJobs.isEmpty();
     }
 
-    public void addFinishedJob(K8sJob job) {
+    public synchronized void addFinishedJob(K8sJob job) {
         finishedJobs.add(job);
     }
 

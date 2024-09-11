@@ -37,11 +37,12 @@ public class K8sManager {
     public K8sManager(String workflowName) {
         this.workflowName = workflowName;
         this.jobs = new ArrayList<K8sJob>();
-        this.init = false;
+        this.init = null;
     }
 
     public void init() {
         K8sConfiguration conf = K8sConfiguration.getInstance();
+
         System.err.println("K8s Manager init with " + workflowName);
         try {
             checkNamespace();
@@ -59,6 +60,7 @@ public class K8sManager {
             init = true;
         } catch (Exception e) {
             logger.error("Failed to init the manager", e);
+            init = false;
         }
     }
 
@@ -71,15 +73,16 @@ public class K8sManager {
             if (this.volume != null)
                 volume.deletePV();
             
-            /* hard cleaning not prod */
-            for (K8sJob job : jobs) { job.clean(); }
+            for (K8sJob job : jobs) {
+                job.clean();
+            }
             volume = null;
         } catch (ApiException e) {
             logger.error("Failed to destroy the manager");
         }
     }
 
-    /*
+    /**
      * Check if the k8s cluster already have the namespace
      * if it isn't here, then it is created
      */
@@ -131,9 +134,26 @@ public class K8sManager {
     }
 
     /**
+     * Check if the init state is finished
+     */
+    private boolean isReady() {
+        int i = 0;
+
+        while (true) {
+            if (init != null && init == true) {
+                return true;
+            } else if (i < K8sConstants.maxRetryToPush || (init != null && init == false)) {
+                Utils.sleepNException(10000);
+            } else {
+                return false;
+            }
+            i++;
+        }
+    }
+
+    /**
      * Create a thread instance that will launch job when ressources are available (volumes)
      * The end variable is used to know if a thread instance has already been launched.
-     * @param exec
      */
     private void submitter(K8sJob exec) {
         if (end == null) {
@@ -149,33 +169,19 @@ public class K8sManager {
      * Public submitter that prepare the K8sJob object and wait for the manager to be initied (in case of slow cluster)
      */
     public void submitter(String cmd, String dockerImage, String jobID) {
-        int i = 0;
         K8sJob exec = new K8sJob(jobID, workflowName);
 
-        while (true) {
-            if (init == true) {
-                break;
-            } else if (i == K8sConstants.maxRetryToPush) {
-                synchronized (this) {
-                    K8sMonitor.getInstance().addFinishedJob(exec);
-                }
-                exec.setStatus(GaswStatus.STALLED);
-                return ;
-            } else {
-                try {
-                    System.err.println("[ATTENTE] Manager pas encore Init");
-                    TimeUnit.MILLISECONDS.sleep(10000);
-                } catch (InterruptedException e) {}
-            }
-            i++;
+        if (isReady()) {
+            exec.setCommand(cmd);
+            exec.setImage(dockerImage);
+            exec.setVolumes(Arrays.asList(volume, sharedVolume));
+            exec.setWorkingDir(K8sConstants.mountPathContainer + volume.getName());
+            exec.configure();
+            submitter(exec);
+        } else {
+            K8sMonitor.getInstance().addFinishedJob(exec);
+            exec.setStatus(GaswStatus.STALLED);
         }
-
-        exec.setCommand(cmd);
-        exec.setImage(dockerImage);
-        exec.setVolumes(Arrays.asList(volume, sharedVolume));
-        exec.setWorkingDir(K8sConstants.mountPathContainer + volume.getName());
-        exec.configure();
-        submitter(exec);
     }
 
     class K8sRunner implements Runnable {
