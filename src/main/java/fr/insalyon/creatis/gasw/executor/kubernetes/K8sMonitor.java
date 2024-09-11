@@ -52,6 +52,8 @@ public class K8sMonitor extends GaswMonitor {
             if (stus != GaswStatus.RUNNING && stus != GaswStatus.QUEUED && stus != GaswStatus.UNDEFINED && stus != GaswStatus.NOT_SUBMITTED) {
                 j.setTerminated();
                 finishedJobs.add(j);
+            } else if (stus ==  GaswStatus.RUNNING) {
+                updateJob(j.getJobID(), stus);
             }
         }
     }
@@ -134,9 +136,11 @@ public class K8sMonitor extends GaswMonitor {
         try {
             var job = jobDAO.getJobByID(jobID);
 
-            job.setStatus(status);
-            jobDAO.update(job);
-            System.err.println("je viens de mettre à jour le job " + job.getId() + " sur le statut " + status.toString());
+            if (job.getStatus() != status) {
+                job.setStatus(status);
+                jobDAO.update(job);
+                System.err.println("je viens de mettre à jour le job " + job.getId() + " sur le statut " + status.toString());
+            }
         } catch (DAOException e) {
             System.err.println("ICI j'ai une dao exeception! " + e.getMessage());
         }

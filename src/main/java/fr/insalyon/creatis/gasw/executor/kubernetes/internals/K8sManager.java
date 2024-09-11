@@ -159,7 +159,7 @@ public class K8sManager {
                 synchronized (this) {
                     K8sMonitor.getInstance().addFinishedJob(exec);
                 }
-                exec.setStatus(GaswStatus.CANCELLED);
+                exec.setStatus(GaswStatus.STALLED);
                 return ;
             } else {
                 try {

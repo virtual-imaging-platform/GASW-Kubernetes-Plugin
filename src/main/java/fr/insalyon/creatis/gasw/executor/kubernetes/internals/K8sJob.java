@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
+import fr.insalyon.creatis.gasw.GaswConfiguration;
 import fr.insalyon.creatis.gasw.execution.GaswStatus;
 import fr.insalyon.creatis.gasw.executor.kubernetes.K8sMonitor;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
@@ -135,6 +136,25 @@ public class K8sJob {
         return volumesMounts;
     }
 
+    private GaswStatus getStatusRequest(BatchV1Api api) {
+        try {
+            V1Job updatedJob = api.readNamespacedJob(job.getMetadata().getName(), conf.getK8sNamespace()).execute();
+            V1JobStatus status = updatedJob.getStatus();
+
+            if (status.getFailed() != null && status.getFailed() > 0)
+                return GaswStatus.ERROR;
+            else if (status.getActive() != null && status.getActive() > 0)
+                return GaswStatus.RUNNING;
+            else if (status.getSucceeded() != null && status.getSucceeded() > 0)
+                return GaswStatus.COMPLETED;
+            else
+                return GaswStatus.QUEUED;
+        } catch (ApiException e) {
+            logger.info("Impossible de récuperer l'état du job" + e.getStackTrace());
+            return GaswStatus.UNDEFINED;
+        }
+    }
+
     /**
      * This create the V1Job item and configure alls specs
      * @apiNote Can be easilly upgrade to List<V1Container>
@@ -194,7 +214,6 @@ public class K8sJob {
             logger.error("Impossible to start job value is null");
         } else {
             api.createNamespacedJob(conf.getK8sNamespace(), job).execute();
-            K8sMonitor.getInstance().updateJob(getJobID(), GaswStatus.RUNNING);
             setStatus(GaswStatus.SUCCESSFULLY_SUBMITTED);
         }
     }
@@ -224,28 +243,21 @@ public class K8sJob {
 
     public GaswStatus getStatus() {
         BatchV1Api api = conf.getK8sBatchApi();
+        GaswStatus retrivedStatus;
 
-        if (status == GaswStatus.CANCELLED)
-            return GaswStatus.CANCELLED;
+        if (status == GaswStatus.STALLED)
+            return status;
         if (job != null) {
             if (status == GaswStatus.NOT_SUBMITTED)
                 return status;
-            try {
-                V1Job updatedJob = api.readNamespacedJob(job.getMetadata().getName(), conf.getK8sNamespace()).execute();
-                V1JobStatus status = updatedJob.getStatus();
+            for (int i = 0; i < K8sConstants.statusRetry; i++) {
+                retrivedStatus = getStatusRequest(api);
 
-                if (status.getFailed() != null && status.getFailed() > 0)
-                    return GaswStatus.ERROR;
-                else if (status.getActive() != null && status.getActive() > 0)
-                    return GaswStatus.RUNNING;
-                else if (status.getSucceeded() != null && status.getSucceeded() > 0)
-                    return GaswStatus.COMPLETED;
-                else
-                    return GaswStatus.QUEUED;
-            } catch (ApiException e) {
-                logger.info("Impossible de récuperer l'état du job" + e.getStackTrace());
-                return GaswStatus.CANCELLED;
+                if (retrivedStatus != GaswStatus.UNDEFINED)
+                    return retrivedStatus;
+                Utils.sleepNException(K8sConstants.statusRetryWait);
             }
+            return GaswStatus.STALLED;
         }
         return GaswStatus.UNDEFINED;
     }

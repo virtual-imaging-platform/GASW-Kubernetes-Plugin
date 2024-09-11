@@ -124,7 +124,7 @@ public class K8sVolume {
             return volume;
         } catch (ApiException e) {
             if (e.getCode() != 404)
-                logger.error("failed to check if " + volumeName + " exist (pv and pvc)");
+                logger.error("Failed to retrieve the volume " + volumeName + " exist (pv and pvc)");
             return null;
         }
     }
