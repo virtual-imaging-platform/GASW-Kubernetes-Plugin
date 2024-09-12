@@ -1,6 +1,7 @@
 package fr.insalyon.creatis.gasw.executor.kubernetes.internals;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +14,7 @@ import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimVolumeSource;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
 
-@Data
+@Getter @Setter
 public class KJobData {
 
     private String          workflowName;
