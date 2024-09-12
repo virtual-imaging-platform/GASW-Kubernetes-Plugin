@@ -12,49 +12,49 @@ import fr.insalyon.creatis.gasw.bean.Job;
 import fr.insalyon.creatis.gasw.dao.DAOException;
 import fr.insalyon.creatis.gasw.execution.GaswMonitor;
 import fr.insalyon.creatis.gasw.execution.GaswStatus;
-import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConstants;
-import fr.insalyon.creatis.gasw.executor.kubernetes.internals.K8sJob;
-import fr.insalyon.creatis.gasw.executor.kubernetes.internals.K8sManager;
+import fr.insalyon.creatis.gasw.executor.kubernetes.config.KConstants;
+import fr.insalyon.creatis.gasw.executor.kubernetes.internals.KJob;
+import fr.insalyon.creatis.gasw.executor.kubernetes.internals.KManager;
 import io.kubernetes.client.openapi.ApiException;
 
-public class K8sMonitor extends GaswMonitor {
+public class KMonitor extends GaswMonitor {
 
     private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
-    private static K8sMonitor 	instance;
+    private static KMonitor 	instance;
     
-    private List<K8sJob>        finishedJobs;
+    private List<KJob>        finishedJobs;
     private boolean 			stop;
     
-    private K8sManager			manager;
+    private KManager			manager;
 
-    public synchronized static K8sMonitor getInstance() {
+    public synchronized static KMonitor getInstance() {
         if (instance == null) {
-            instance = new K8sMonitor();
+            instance = new KMonitor();
             instance.start();
         }
         return instance;
     }
 
-    public void setManager(K8sManager manager) { this.manager = manager; }
+    public void setManager(KManager manager) { this.manager = manager; }
 
-    private K8sMonitor() {
+    private KMonitor() {
         super();
-        finishedJobs = new ArrayList<K8sJob>();
+        finishedJobs = new ArrayList<KJob>();
         stop = false;
     }
 
     private void statusChecker() {
-        ArrayList<K8sJob> jobs = manager.getUnfinishedJobs();
+        ArrayList<KJob> jobs = manager.getUnfinishedJobs();
 
-        for (K8sJob j : jobs) {
+        for (KJob j : jobs) {
             GaswStatus stus = j.getStatus();
 
-            System.err.println("job : " + j.getJobID() + " : " + stus.toString());
+            System.err.println("job : " + j.getData().getJobID() + " : " + stus.toString());
             if (stus != GaswStatus.RUNNING && stus != GaswStatus.QUEUED && stus != GaswStatus.UNDEFINED && stus != GaswStatus.NOT_SUBMITTED) {
-                j.setTerminated();
+                j.setTerminated(true);
                 finishedJobs.add(j);
             } else if (stus ==  GaswStatus.RUNNING) {
-                updateJob(j.getJobID(), stus);
+                updateJob(j.getData().getJobID(), stus);
             }
         }
     }
@@ -66,9 +66,9 @@ public class K8sMonitor extends GaswMonitor {
             statusChecker();
             try {
                 while (hasFinishedJobs()) {
-                    K8sJob kJob = pullFinishedJobID();
+                    KJob kJob = pullFinishedJobID();
                     GaswStatus status = kJob.getStatus();
-                    Job job = jobDAO.getJobByID(kJob.getJobID());
+                    Job job = jobDAO.getJobByID(kJob.getData().getJobID());
                     
                     if (status == GaswStatus.ERROR || status == GaswStatus.COMPLETED) {
                         job.setExitCode(kJob.getExitCode());
@@ -76,10 +76,10 @@ public class K8sMonitor extends GaswMonitor {
                     } else {
                         job.setStatus(status);
                     }
-                    System.err.println("job : " + kJob.getJobID() + " final : " + job.getStatus());
+                    System.err.println("job : " + kJob.getData().getJobID() + " final : " + job.getStatus());
                     
                     jobDAO.update(job);
-                    new K8sOutputParser(job.getId(), manager).start();
+                    new KOutputParser(job.getId(), manager).start();
                 }
 
                 Thread.sleep(GaswConfiguration.getInstance().getDefaultSleeptime());
@@ -97,7 +97,7 @@ public class K8sMonitor extends GaswMonitor {
     public synchronized void add(String jobID, String symbolicName, String fileName, String parameters) throws GaswException {
         Job job = new Job(jobID, GaswConfiguration.getInstance().getSimulationID(),
             GaswStatus.QUEUED, symbolicName, fileName, parameters,
-            K8sConstants.EXECUTOR_NAME);
+            KConstants.EXECUTOR_NAME);
 
         add(job);
         logger.info("Adding job: " + jobID);
@@ -110,8 +110,8 @@ public class K8sMonitor extends GaswMonitor {
         }
     }
 
-    public K8sJob pullFinishedJobID() {
-        K8sJob lastJob = finishedJobs.get(0);
+    public KJob pullFinishedJobID() {
+        KJob lastJob = finishedJobs.get(0);
 
         finishedJobs.remove(lastJob);
         return lastJob;
@@ -121,7 +121,7 @@ public class K8sMonitor extends GaswMonitor {
         return ! finishedJobs.isEmpty();
     }
 
-    public synchronized void addFinishedJob(K8sJob job) {
+    public synchronized void addFinishedJob(KJob job) {
         finishedJobs.add(job);
     }
 
@@ -149,7 +149,7 @@ public class K8sMonitor extends GaswMonitor {
 
     @Override
     protected void kill(Job job) {
-        K8sJob kJob = manager.getJob(job.getId());
+        KJob kJob = manager.getJob(job.getId());
 
         if (kJob == null)
             return ;

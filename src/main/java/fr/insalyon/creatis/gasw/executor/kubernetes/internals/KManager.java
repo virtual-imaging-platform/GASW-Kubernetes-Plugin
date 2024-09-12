@@ -4,7 +4,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
@@ -14,34 +13,34 @@ import fr.insalyon.creatis.gasw.GaswConfiguration;
 import fr.insalyon.creatis.gasw.GaswConstants;
 import fr.insalyon.creatis.gasw.GaswException;
 import fr.insalyon.creatis.gasw.execution.GaswStatus;
-import fr.insalyon.creatis.gasw.executor.kubernetes.K8sMonitor;
-import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
-import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConstants;
+import fr.insalyon.creatis.gasw.executor.kubernetes.KMonitor;
+import fr.insalyon.creatis.gasw.executor.kubernetes.config.KConfiguration;
+import fr.insalyon.creatis.gasw.executor.kubernetes.config.KConstants;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1NamespaceList;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 
-public class K8sManager {
+public class KManager {
     private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
 
     private String						workflowName;
-    private K8sVolume 					volume;
-    private K8sVolume					sharedVolume;
+    private KVolume 					volume;
+    private KVolume					    sharedVolume;
     
-    private volatile ArrayList<K8sJob> 	jobs;
+    private volatile ArrayList<KJob> 	jobs;
     private Boolean						end;
     private Boolean						init;
 
-    public K8sManager(String workflowName) {
+    public KManager(String workflowName) {
         this.workflowName = workflowName;
-        this.jobs = new ArrayList<K8sJob>();
+        this.jobs = new ArrayList<KJob>();
         this.init = null;
     }
 
     public void init() {
-        K8sConfiguration conf = K8sConfiguration.getInstance();
+        KConfiguration conf = KConfiguration.getInstance();
 
         System.err.println("K8s Manager init with " + workflowName);
         try {
@@ -52,7 +51,7 @@ public class K8sManager {
             checkOutputsDir();
             System.err.println("User ouputs directories checked !");
 
-            volume = new K8sVolume(conf, workflowName, "ReadWriteMany");
+            volume = new KVolume(conf, workflowName, "ReadWriteMany");
             volume.createPV();
             volume.createPVC();
             System.err.println("Workflow volume created !");
@@ -73,7 +72,7 @@ public class K8sManager {
             if (this.volume != null)
                 volume.deletePV();
             
-            for (K8sJob job : jobs) {
+            for (KJob job : jobs) {
                 job.clean();
             }
             volume = null;
@@ -87,9 +86,9 @@ public class K8sManager {
      * if it isn't here, then it is created
      */
     public void checkNamespace() throws ApiException {
-        CoreV1Api api = K8sConfiguration.getInstance().getK8sCoreApi();
+        CoreV1Api api = KConfiguration.getInstance().getK8sCoreApi();
         V1NamespaceList list = api.listNamespace().execute();
-        String targetName = K8sConfiguration.getInstance().getK8sNamespace();
+        String targetName = KConfiguration.getInstance().getK8sNamespace();
         
         for (V1Namespace ns : list.getItems()) {
             String name = ns.getMetadata().getName();
@@ -108,10 +107,10 @@ public class K8sManager {
      * Check if the /workflows/sharedata volume exist 
      */
     public void checkSharedVolume() throws ApiException {
-        K8sVolume sharedUserVolume = K8sVolume.retrieve("SharedData", "ReadOnlyMany");
+        KVolume sharedUserVolume = KVolume.retrieve("SharedData", "ReadOnlyMany");
 
         if (sharedUserVolume == null) {
-            sharedUserVolume = new K8sVolume(K8sConfiguration.getInstance(), "SharedData", "ReadOnlyMany");
+            sharedUserVolume = new KVolume(KConfiguration.getInstance(), "SharedData", "ReadOnlyMany");
 
             sharedUserVolume.createPV();
             sharedUserVolume.createPVC();
@@ -142,7 +141,7 @@ public class K8sManager {
         while (true) {
             if (init != null && init == true) {
                 return true;
-            } else if (i < K8sConstants.maxRetryToPush || (init != null && init == false)) {
+            } else if (i < KConstants.maxRetryToPush || (init != null && init == false)) {
                 Utils.sleepNException(10000);
             } else {
                 return false;
@@ -155,7 +154,7 @@ public class K8sManager {
      * Create a thread instance that will launch job when ressources are available (volumes)
      * The end variable is used to know if a thread instance has already been launched.
      */
-    private void submitter(K8sJob exec) {
+    private void submitter(KJob exec) {
         if (end == null) {
             end = false;
             new Thread(this.new K8sRunner()).start();
@@ -169,18 +168,18 @@ public class K8sManager {
      * Public submitter that prepare the K8sJob object and wait for the manager to be initied (in case of slow cluster)
      */
     public void submitter(String cmd, String dockerImage, String jobID) {
-        K8sJob exec = new K8sJob(jobID, workflowName);
+        KJob exec = new KJob(jobID, workflowName);
 
         if (isReady()) {
-            exec.setCommand(cmd);
-            exec.setImage(dockerImage);
-            exec.setVolumes(Arrays.asList(volume, sharedVolume));
-            exec.setWorkingDir(K8sConstants.mountPathContainer + volume.getName());
+            exec.getData().setCommand(cmd);
+            exec.getData().setImage(dockerImage);
+            exec.getData().setVolumes(Arrays.asList(volume, sharedVolume));
+            exec.getData().setWorkingDir(KConstants.mountPathContainer + volume.getName());
             exec.configure();
             submitter(exec);
         } else {
-            K8sMonitor.getInstance().addFinishedJob(exec);
-            exec.setStatus(GaswStatus.STALLED);
+            KMonitor.getInstance().addFinishedJob(exec);
+            exec.getData().setStatus(GaswStatus.STALLED);
         }
     }
 
@@ -213,9 +212,9 @@ public class K8sManager {
             }
             while (end == false) {
                 synchronized (this) {
-                    for (K8sJob exec : jobs) {
+                    for (KJob exec : jobs) {
                         if (exec.getStatus() == GaswStatus.NOT_SUBMITTED) {
-                            exec.setStatus(GaswStatus.QUEUED);
+                            exec.getData().setStatus(GaswStatus.QUEUED);
                             exec.start();
                         }
                     }
@@ -230,11 +229,11 @@ public class K8sManager {
         }
     }
 
-    public ArrayList<K8sJob> getUnfinishedJobs() { 
-        ArrayList<K8sJob> copy = new ArrayList<K8sJob>(jobs);
+    public ArrayList<KJob> getUnfinishedJobs() { 
+        ArrayList<KJob> copy = new ArrayList<KJob>(jobs);
 
         System.err.println("[BEFORE-COPY] " + copy.toString());
-        Iterator<K8sJob> it = copy.iterator();
+        Iterator<KJob> it = copy.iterator();
         while (it.hasNext()) {
             if (it.next().isTerminated())
                it.remove();
@@ -242,9 +241,9 @@ public class K8sManager {
         return copy; 
     }
 
-    public K8sJob getJob(String jobId) {
-        for (K8sJob j : jobs) {
-            if (j.getJobID() == jobId)
+    public KJob getJob(String jobId) {
+        for (KJob j : jobs) {
+            if (j.getData().getJobID() == jobId)
                 return j;
         }
         return null;

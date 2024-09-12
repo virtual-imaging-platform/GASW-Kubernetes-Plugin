@@ -13,14 +13,14 @@ import fr.insalyon.creatis.gasw.dao.DAOFactory;
 import fr.insalyon.creatis.gasw.dao.JobDAO;
 import fr.insalyon.creatis.gasw.execution.GaswStatus;
 import fr.insalyon.creatis.gasw.execution.GaswSubmit;
-import fr.insalyon.creatis.gasw.executor.kubernetes.internals.K8sManager;
+import fr.insalyon.creatis.gasw.executor.kubernetes.internals.KManager;
 
-public class K8sSubmit extends GaswSubmit {
+public class KSubmit extends GaswSubmit {
 
     private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
-    private K8sManager 			manager;
+    private KManager 			manager;
 
-    public K8sSubmit(GaswInput gaswInput, K8sMinorStatusGenerator minorStatusServiceGenerator, K8sManager manager) throws GaswException {
+    public KSubmit(GaswInput gaswInput, KMinorStatusGenerator minorStatusServiceGenerator, KManager manager) throws GaswException {
         super(gaswInput, minorStatusServiceGenerator);
         this.manager = manager;
         scriptName = generateScript();
@@ -36,7 +36,7 @@ public class K8sSubmit extends GaswSubmit {
             params.append(" ");
         }
 
-        K8sMonitor.getInstance().add(fileName, gaswInput.getExecutableName(), fileName, params.toString());
+        KMonitor.getInstance().add(fileName, gaswInput.getExecutableName(), fileName, params.toString());
         wrappedSubmit(fileName);
         logger.info("K8s Executor Job ID: " + fileName);
 

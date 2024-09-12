@@ -5,7 +5,7 @@ import fr.insalyon.creatis.gasw.execution.GaswMinorStatusServiceGenerator;
 /**
  * @version DEPRECRATED CLASS
  */
-public class K8sMinorStatusGenerator extends GaswMinorStatusServiceGenerator {
+public class KMinorStatusGenerator extends GaswMinorStatusServiceGenerator {
 
     @Override
     public String getClient() { return null; }

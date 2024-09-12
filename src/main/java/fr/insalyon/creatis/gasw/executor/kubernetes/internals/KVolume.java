@@ -5,8 +5,8 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
-import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConfiguration;
-import fr.insalyon.creatis.gasw.executor.kubernetes.config.K8sConstants;
+import fr.insalyon.creatis.gasw.executor.kubernetes.config.KConfiguration;
+import fr.insalyon.creatis.gasw.executor.kubernetes.config.KConstants;
 import io.kubernetes.client.custom.Quantity;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
@@ -18,9 +18,9 @@ import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimSpec;
 import io.kubernetes.client.openapi.models.V1PersistentVolumeSpec;
 import io.kubernetes.client.openapi.models.V1VolumeResourceRequirements;
 
-public class K8sVolume {
+public class KVolume {
     private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
-    private final K8sConfiguration	conf;
+    private final KConfiguration	conf;
 
     private V1PersistentVolume 		pv;
     private V1PersistentVolumeClaim pvc;
@@ -30,7 +30,7 @@ public class K8sVolume {
     /**
      * @param accessPermissions : "ReadWriteMany" or "ReadOnlyMany"
      */
-    public K8sVolume(K8sConfiguration conf, String workflowName, String accessModes) {
+    public KVolume(KConfiguration conf, String workflowName, String accessModes) {
         this.conf = conf;
         this.name = workflowName;
         this.accessModes = accessModes;
@@ -66,7 +66,7 @@ public class K8sVolume {
         pvc = new V1PersistentVolumeClaim()
             .metadata(new V1ObjectMeta().name(getClaimName()).namespace(conf.getK8sNamespace()))
             .spec(new V1PersistentVolumeClaimSpec()
-                .storageClassName(K8sConstants.storageClassName)
+                .storageClassName(KConstants.storageClassName)
                 .resources(new V1VolumeResourceRequirements()
                         .requests(Map.of("storage", new Quantity("1Gi"))))
                 .addAccessModesItem(accessModes)
@@ -110,12 +110,12 @@ public class K8sVolume {
         }
     }
 
-    public static K8sVolume retrieve(String volumeName, String accessModes) {
-        K8sConfiguration conf = K8sConfiguration.getInstance();
+    public static KVolume retrieve(String volumeName, String accessModes) {
+        KConfiguration conf = KConfiguration.getInstance();
         CoreV1Api api = conf.getK8sCoreApi();
 
         try {
-            K8sVolume volume = new K8sVolume(conf, volumeName, accessModes);
+            KVolume volume = new KVolume(conf, volumeName, accessModes);
             V1PersistentVolume pv = api.readPersistentVolume(volume.getKubernetesName()).execute();
             V1PersistentVolumeClaim pvc = api.readNamespacedPersistentVolumeClaim(volume.getClaimName(), conf.getK8sNamespace()).execute();
 

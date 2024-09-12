@@ -1,6 +1,6 @@
 package fr.insalyon.creatis.gasw.executor.kubernetes.config;
 
-public class K8sConstants {
+public class KConstants {
 
     // Plugin
     public static String kubeConfig = "/var/www/cgi-bin/kubernetes/kube_config";

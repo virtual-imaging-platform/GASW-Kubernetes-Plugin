@@ -9,19 +9,19 @@ import fr.insalyon.creatis.gasw.GaswException;
 import fr.insalyon.creatis.gasw.GaswExitCode;
 import fr.insalyon.creatis.gasw.GaswOutput;
 import fr.insalyon.creatis.gasw.execution.GaswOutputParser;
-import fr.insalyon.creatis.gasw.executor.kubernetes.internals.K8sJob;
-import fr.insalyon.creatis.gasw.executor.kubernetes.internals.K8sManager;
+import fr.insalyon.creatis.gasw.executor.kubernetes.internals.KJob;
+import fr.insalyon.creatis.gasw.executor.kubernetes.internals.KManager;
 
-public class K8sOutputParser extends GaswOutputParser {
+public class KOutputParser extends GaswOutputParser {
     
     private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
 
     private File stdOut;
     private File stdErr;
-    private K8sManager manager;
+    private KManager manager;
     private String jobID;
 
-    public K8sOutputParser(String jobID, K8sManager manager) {
+    public KOutputParser(String jobID, KManager manager) {
         super(jobID);
         this.manager = manager;
         this.jobID = jobID;
@@ -30,7 +30,7 @@ public class K8sOutputParser extends GaswOutputParser {
     @Override
     public GaswOutput getGaswOutput() throws GaswException {
         GaswExitCode gaswExitCode = GaswExitCode.EXECUTION_CANCELED;
-        K8sJob job = manager.getJob(jobID);
+        KJob job = manager.getJob(jobID);
         int exitCode;
 
         stdOut = getAppStdFile(GaswConstants.OUT_EXT, GaswConstants.OUT_ROOT);

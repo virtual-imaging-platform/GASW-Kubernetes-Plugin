@@ -20,10 +20,10 @@ import org.apache.log4j.Logger;
 /**
  * K8sConfiguration
  */
-public class K8sConfiguration {
+public class KConfiguration {
 
     private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
-    private static K8sConfiguration instance;
+    private static KConfiguration instance;
 
     // K8s objects
     private CoreV1Api				k8sCoreApi;
@@ -50,9 +50,9 @@ public class K8sConfiguration {
     public String getNFSAddress() { return nfsAddress; }
     public String getNFSPath() { return nfsPath; }
 
-    public static K8sConfiguration getInstance() {
+    public static KConfiguration getInstance() {
         if (instance == null)
-            instance = new K8sConfiguration();
+            instance = new KConfiguration();
         return instance;
     }
 
@@ -92,7 +92,7 @@ public class K8sConfiguration {
      */
     private void createLocalClient() throws GaswException {
         try {
-            ApiClient client = Config.fromConfig(K8sConstants.kubeConfig);
+            ApiClient client = Config.fromConfig(KConstants.kubeConfig);
             Configuration.setDefaultApiClient(client);
             defineApis(client);
         } catch (IOException e) {
