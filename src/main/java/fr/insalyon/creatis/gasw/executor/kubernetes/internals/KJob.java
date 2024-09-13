@@ -26,6 +26,7 @@ import lombok.extern.log4j.Log4j;
 
 @Log4j
 public class KJob {
+
     private final KConfiguration 	conf;
 
     @Getter
@@ -36,6 +37,7 @@ public class KJob {
 
     public KJob(String jobID, String workflowName) {
         conf = KConfiguration.getInstance();
+        data = new KJobData();
         data.setJobID(jobID);
         data.setWorkflowName(workflowName);
         data.setStatus(GaswStatus.UNDEFINED);
