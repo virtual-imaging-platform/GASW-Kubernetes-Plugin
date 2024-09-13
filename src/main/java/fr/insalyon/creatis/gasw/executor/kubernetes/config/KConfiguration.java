@@ -15,14 +15,13 @@ import io.kubernetes.client.openapi.apis.StorageV1Api;
 import io.kubernetes.client.util.ClientBuilder;
 import io.kubernetes.client.util.Config;
 import io.kubernetes.client.util.credentials.AccessTokenAuthentication;
-import org.apache.log4j.Logger;
+import lombok.Getter;
+import lombok.extern.log4j.Log4j;
 
-/**
- * K8sConfiguration
- */
+
+@Getter @Log4j
 public class KConfiguration {
 
-    private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
     private static KConfiguration instance;
 
     // K8s objects
@@ -38,17 +37,6 @@ public class KConfiguration {
     // NFS
     private String					nfsAddress;
     private String					nfsPath;
-
-    /// Getters
-    public CoreV1Api getK8sCoreApi() { return k8sCoreApi; }
-    public BatchV1Api getK8sBatchApi() { return k8sBatchApi; }
-    public StorageV1Api getK8sStorageApi() { return k8sStorageApi; }
-
-    public String getK8sAddress() { return k8sAddress; }
-    public String getK8sToken() { return k8sToken; }
-    public String getK8sNamespace() { return k8sNamespace; }
-    public String getNFSAddress() { return nfsAddress; }
-    public String getNFSPath() { return nfsPath; }
 
     public static KConfiguration getInstance() {
         if (instance == null)
@@ -72,9 +60,9 @@ public class KConfiguration {
             nfsAddress = map.get("nfs_address").toString();
             nfsPath = map.get("nfs_path").toString();
 
-            logger.info("Configuration file was loaded successfully !");
+            log.info("Configuration file was loaded successfully !");
         } catch (IOException e) {
-            logger.error(e.getStackTrace(), e);
+            log.error(e.getStackTrace(), e);
             throw new GaswException("Client creation failed");
         }
     }
@@ -84,7 +72,7 @@ public class KConfiguration {
         k8sBatchApi =  new BatchV1Api(client);
         k8sStorageApi = new StorageV1Api(client);
 
-        logger.info("Apis were defined successffully");
+        log.info("Apis were defined successffully");
     }
     
     /**
@@ -96,7 +84,7 @@ public class KConfiguration {
             Configuration.setDefaultApiClient(client);
             defineApis(client);
         } catch (IOException e) {
-            logger.error(e.getStackTrace(), e);
+            log.error(e.getStackTrace(), e);
             throw new GaswException("Client creation failed");
         }
     }

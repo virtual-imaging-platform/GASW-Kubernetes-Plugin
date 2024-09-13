@@ -3,8 +3,6 @@ package fr.insalyon.creatis.gasw.executor.kubernetes.internals;
 import java.util.Arrays;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
-
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.KConfiguration;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.KConstants;
 import io.kubernetes.client.custom.Quantity;
@@ -17,9 +15,11 @@ import io.kubernetes.client.openapi.models.V1PersistentVolumeClaim;
 import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimSpec;
 import io.kubernetes.client.openapi.models.V1PersistentVolumeSpec;
 import io.kubernetes.client.openapi.models.V1VolumeResourceRequirements;
+import lombok.extern.log4j.Log4j;
 
+@Log4j
 public class KVolume {
-    private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
+
     private final KConfiguration	conf;
 
     private V1PersistentVolume 		pv;
@@ -38,7 +38,7 @@ public class KVolume {
 
     public String getName() { return name; }
     public String getClaimName() { return getKubernetesName() + "-claim"; }
-    public String getSubMountPath() { return conf.getNFSPath() + getName() + "/"; } 
+    public String getSubMountPath() { return conf.getNfsPath() + getName() + "/"; }
 
     /**
      * This function return in lowercase to conform to RFC 1123 (volume name)
@@ -56,7 +56,7 @@ public class KVolume {
                 .capacity(Map.of("storage", new Quantity("1Gi")))
                     .nfs(new V1NFSVolumeSource()
                     .path(getSubMountPath())
-                    .server(conf.getNFSAddress())
+                    .server(conf.getNfsAddress())
                 ));
         conf.getK8sCoreApi().createPersistentVolume(pv).execute();
     }
@@ -105,7 +105,7 @@ public class KVolume {
                 return true;
             return false;
         } catch (ApiException e) {
-            logger.error("Failed to check if the volume PV and PVC were available !", e);
+            log.error("Failed to check if the volume PV and PVC were available !", e);
             return false;
         }
     }
@@ -124,7 +124,7 @@ public class KVolume {
             return volume;
         } catch (ApiException e) {
             if (e.getCode() != 404)
-                logger.error("Failed to retrieve the volume " + volumeName + " exist (pv and pvc)");
+                log.error("Failed to retrieve the volume " + volumeName + " exist (pv and pvc)");
             return null;
         }
     }

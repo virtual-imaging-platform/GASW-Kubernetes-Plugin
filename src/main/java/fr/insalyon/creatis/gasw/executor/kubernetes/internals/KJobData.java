@@ -22,7 +22,7 @@ public class KJobData {
     private String          kubernetesJobID;
     
     private String          command;
-    private List<KVolume> kVolumes;
+    private List<KVolume>   kVolumes;
 
     private V1Job 			job;
     private V1Container     container;
@@ -46,7 +46,6 @@ public class KJobData {
     public void setWorkingDir(String workingDir) {
         container.workingDir(workingDir);
     }
-
 
      /**
      * Stdout & stderr redirectors

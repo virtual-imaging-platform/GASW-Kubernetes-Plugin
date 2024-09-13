@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import org.apache.log4j.Logger;
-
 import fr.insalyon.creatis.gasw.GaswConfiguration;
 import fr.insalyon.creatis.gasw.GaswException;
 import fr.insalyon.creatis.gasw.bean.Job;
@@ -16,13 +14,14 @@ import fr.insalyon.creatis.gasw.executor.kubernetes.config.KConstants;
 import fr.insalyon.creatis.gasw.executor.kubernetes.internals.KJob;
 import fr.insalyon.creatis.gasw.executor.kubernetes.internals.KManager;
 import io.kubernetes.client.openapi.ApiException;
+import lombok.extern.log4j.Log4j;
 
+@Log4j
 public class KMonitor extends GaswMonitor {
 
-    private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
     private static KMonitor 	instance;
     
-    private List<KJob>        finishedJobs;
+    private List<KJob>          finishedJobs;
     private boolean 			stop;
     
     private KManager			manager;
@@ -86,9 +85,9 @@ public class KMonitor extends GaswMonitor {
 
             } catch (GaswException ex) {
             } catch (DAOException ex) {
-                logger.error(ex);
+                log.error(ex);
             } catch (InterruptedException ex) {
-                logger.error(ex);
+                log.error(ex);
             }
         }
     }
@@ -100,7 +99,7 @@ public class KMonitor extends GaswMonitor {
             KConstants.EXECUTOR_NAME);
 
         add(job);
-        logger.info("Adding job: " + jobID);
+        log.info("Adding job: " + jobID);
         try {
             job.setQueued(new Date());
             jobDAO.update(job);

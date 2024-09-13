@@ -14,8 +14,8 @@ import net.xeoh.plugins.base.annotations.PluginImplementation;
 @PluginImplementation
 public class KExecutor implements ExecutorPlugin {
 
-    private KSubmit   k8sSubmit;
-    private KManager  manager;
+    private KSubmit     k8sSubmit;
+    private KManager    manager;
     private boolean     loaded = false;
 
     @Override

@@ -2,8 +2,6 @@ package fr.insalyon.creatis.gasw.executor.kubernetes;
 
 import java.io.File;
 
-import org.apache.log4j.Logger;
-
 import fr.insalyon.creatis.gasw.GaswConstants;
 import fr.insalyon.creatis.gasw.GaswException;
 import fr.insalyon.creatis.gasw.GaswExitCode;
@@ -14,8 +12,6 @@ import fr.insalyon.creatis.gasw.executor.kubernetes.internals.KManager;
 
 public class KOutputParser extends GaswOutputParser {
     
-    private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
-
     private File stdOut;
     private File stdErr;
     private KManager manager;

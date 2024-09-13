@@ -14,10 +14,11 @@ import fr.insalyon.creatis.gasw.dao.JobDAO;
 import fr.insalyon.creatis.gasw.execution.GaswStatus;
 import fr.insalyon.creatis.gasw.execution.GaswSubmit;
 import fr.insalyon.creatis.gasw.executor.kubernetes.internals.KManager;
+import lombok.extern.log4j.Log4j;
 
+@Log4j
 public class KSubmit extends GaswSubmit {
 
-    private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
     private KManager 			manager;
 
     public KSubmit(GaswInput gaswInput, KMinorStatusGenerator minorStatusServiceGenerator, KManager manager) throws GaswException {
@@ -38,7 +39,7 @@ public class KSubmit extends GaswSubmit {
 
         KMonitor.getInstance().add(fileName, gaswInput.getExecutableName(), fileName, params.toString());
         wrappedSubmit(fileName);
-        logger.info("K8s Executor Job ID: " + fileName);
+        log.info("K8s Executor Job ID: " + fileName);
 
         return fileName;
     }
@@ -57,7 +58,7 @@ public class KSubmit extends GaswSubmit {
             manager.submitter(cmd, "ethaaalpha/podman-boutiques:latest", jobID);
 
         } catch (DAOException e) {
-            logger.error(e.getStackTrace());
+            log.error(e.getStackTrace());
             throw new GaswException("Failed to submit the job (wrapped command)");
         }
     }

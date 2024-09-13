@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 
-import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
@@ -21,9 +20,10 @@ import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1NamespaceList;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
+import lombok.extern.log4j.Log4j;
 
+@Log4j
 public class KManager {
-    private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
 
     private String						workflowName;
     private KVolume 					volume;
@@ -58,7 +58,7 @@ public class KManager {
 
             init = true;
         } catch (Exception e) {
-            logger.error("Failed to init the manager", e);
+            log.error("Failed to init the manager", e);
             init = false;
         }
     }
@@ -77,7 +77,7 @@ public class KManager {
             }
             volume = null;
         } catch (ApiException e) {
-            logger.error("Failed to destroy the manager");
+            log.error("Failed to destroy the manager");
         }
     }
 
@@ -193,9 +193,9 @@ public class KManager {
                 startedTime = DateTime.now();
                 loop();
             } catch (GaswException e) {
-                logger.error(e.getMessage());
+                log.error(e.getMessage());
             } catch (Exception e) {
-                logger.error("Something bad happened during the K8sRunner", e);
+                log.error("Something bad happened during the K8sRunner", e);
             }
         }
 

@@ -2,8 +2,6 @@ package fr.insalyon.creatis.gasw.executor.kubernetes.internals;
 
 import java.util.Arrays;
 
-import org.apache.log4j.Logger;
-
 import fr.insalyon.creatis.gasw.execution.GaswStatus;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.KConfiguration;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.KConstants;
@@ -24,9 +22,10 @@ import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
 import io.kubernetes.client.openapi.models.V1SecurityContext;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.log4j.Log4j;
 
+@Log4j
 public class KJob {
-    private static final Logger logger = Logger.getLogger("fr.insalyon.creatis.gasw");
     private final KConfiguration 	conf;
 
     @Getter
@@ -72,7 +71,7 @@ public class KJob {
             else
                 return GaswStatus.QUEUED;
         } catch (ApiException e) {
-            logger.info("Impossible de récuperer l'état du job" + e.getStackTrace());
+            log.info("Impossible de récuperer l'état du job" + e.getStackTrace());
             return GaswStatus.UNDEFINED;
         }
     }
@@ -111,7 +110,7 @@ public class KJob {
         BatchV1Api api = conf.getK8sBatchApi();
 
         if (data.getJob() == null) {
-            logger.error("Impossible to start job value is null (may not be configured)");
+            log.error("Impossible to start job value is null (may not be configured)");
         } else {
             api.createNamespacedJob(conf.getK8sNamespace(), data.getJob()).execute();
             data.setStatus(GaswStatus.SUCCESSFULLY_SUBMITTED);
