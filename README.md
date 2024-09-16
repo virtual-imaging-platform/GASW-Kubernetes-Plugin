@@ -36,7 +36,7 @@ So, you just have to understand that sometimes the **KJobData.status** variable 
 ### Structure
 I've made a figma scheme the represent briefly the *code structure* of the plugin. 
 
-<iframe style="border: 1px solid rgba(0, 0, 0, 0.1);" width="800" height="450" src="https://embed.figma.com/board/HwVGEjpvj0YIbDYeHxZMZP/GASW-Kubernetes-Extern?node-id=0-1&embed-host=share" allowfullscreen></iframe>
+![alt text](scheme.png)
 
 ### Upgrades and Modification
 If you want to make some changes there is the class **KConstants** that contain some hardcoded values (like the config file path).  
