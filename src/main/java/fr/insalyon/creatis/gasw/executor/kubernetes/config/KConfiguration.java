@@ -23,9 +23,9 @@ public class KConfiguration {
     private static KConfiguration instance;
 
     // K8s objects
-    private CoreV1Api				k8sCoreApi;
-    private BatchV1Api				k8sBatchApi;
-    private StorageV1Api			k8sStorageApi;
+    private CoreV1Api				coreApi;
+    private BatchV1Api				batchApi;
+    private StorageV1Api			storageApi;
 
     // K8s configuration
     private KConfig                 config;
@@ -52,9 +52,9 @@ public class KConfiguration {
     }
     
     private void defineApis(ApiClient client) {
-        k8sCoreApi = new CoreV1Api(client);
-        k8sBatchApi =  new BatchV1Api(client);
-        k8sStorageApi = new StorageV1Api(client);
+        coreApi = new CoreV1Api(client);
+        batchApi =  new BatchV1Api(client);
+        storageApi = new StorageV1Api(client);
 
         log.info("Apis were defined successffully");
     }

@@ -108,7 +108,7 @@ public class KJob {
      * @throws ApiException
      */
     public void start() throws ApiException {
-        BatchV1Api api = conf.getK8sBatchApi();
+        BatchV1Api api = conf.getBatchApi();
 
         if (data.getJob() == null) {
             log.error("Impossible to start job value is null (may not be configured)");
@@ -123,7 +123,7 @@ public class KJob {
      * @throws ApiException
      */
     public void kill() throws ApiException {
-        BatchV1Api api = conf.getK8sBatchApi();
+        BatchV1Api api = conf.getBatchApi();
 
         if (data.getStatus() == GaswStatus.NOT_SUBMITTED)
             return ;
@@ -148,7 +148,7 @@ public class KJob {
      * @return GaswStatus.UNDEFINED means that the job weren't configured
      */
     public GaswStatus getStatus() {
-        BatchV1Api api = conf.getK8sBatchApi();
+        BatchV1Api api = conf.getBatchApi();
         GaswStatus retrievedStatus;
         GaswStatus status = data.getStatus();
 
@@ -173,7 +173,7 @@ public class KJob {
      * @implNote Should be adapted if multiple containers / pods per job
      */
     public Integer getExitCode() {
-        CoreV1Api coreApi = conf.getK8sCoreApi();
+        CoreV1Api coreApi = conf.getCoreApi();
         String jobName = data.getJob().getMetadata().getName();
 
         if (data.getJob() == null)

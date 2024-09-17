@@ -86,7 +86,7 @@ public class KManager {
      * if it isn't here, then it is created
      */
     public void checkNamespace() throws ApiException {
-        CoreV1Api api = KConfiguration.getInstance().getK8sCoreApi();
+        CoreV1Api api = KConfiguration.getInstance().getCoreApi();
         V1NamespaceList list = api.listNamespace().execute();
         String targetName = config.getK8sNamespace();
         
@@ -172,7 +172,7 @@ public class KManager {
     private void submitter(KJob exec) {
         if (end == null) {
             end = false;
-            new Thread(this.new K8sRunner()).start();
+            new Thread(this.new KRunner()).start();
         }
         synchronized (this) {
             jobs.add(exec);
@@ -201,7 +201,27 @@ public class KManager {
         }
     }
 
-    class K8sRunner implements Runnable {
+    public ArrayList<KJob> getUnfinishedJobs() { 
+        ArrayList<KJob> copy = new ArrayList<KJob>(jobs);
+
+        System.err.println("[BEFORE-COPY] " + copy.toString());
+        Iterator<KJob> it = copy.iterator();
+        while (it.hasNext()) {
+            if (it.next().isTerminated())
+               it.remove();
+        }
+        return copy; 
+    }
+
+    public KJob getJob(String jobId) {
+        for (KJob j : jobs) {
+            if (j.getData().getJobID() == jobId)
+                return j;
+        }
+        return null;
+    } 
+
+    class KRunner implements Runnable {
         private Boolean ready = false;
         private DateTime startedTime;
 
@@ -251,24 +271,4 @@ public class KManager {
             }
         }
     }
-
-    public ArrayList<KJob> getUnfinishedJobs() { 
-        ArrayList<KJob> copy = new ArrayList<KJob>(jobs);
-
-        System.err.println("[BEFORE-COPY] " + copy.toString());
-        Iterator<KJob> it = copy.iterator();
-        while (it.hasNext()) {
-            if (it.next().isTerminated())
-               it.remove();
-        }
-        return copy; 
-    }
-
-    public KJob getJob(String jobId) {
-        for (KJob j : jobs) {
-            if (j.getData().getJobID() == jobId)
-                return j;
-        }
-        return null;
-    } 
 }

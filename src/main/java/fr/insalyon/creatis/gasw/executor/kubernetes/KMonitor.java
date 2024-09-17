@@ -19,12 +19,11 @@ import lombok.extern.log4j.Log4j;
 @Log4j
 public class KMonitor extends GaswMonitor {
 
-    private static KMonitor 	instance;
+    private static KMonitor instance;
     
-    private List<KJob>          finishedJobs;
-    private boolean 			stop;
-    
-    private KManager			manager;
+    private List<KJob>      finishedJobs;
+    private boolean 		stop;
+    private KManager	    manager;
 
     public synchronized static KMonitor getInstance() {
         if (instance == null) {

@@ -58,7 +58,7 @@ public class KVolume {
                     .path(getNfsSubMountPath())
                     .server(conf.getConfig().getNfsAddress())
                 ));
-        conf.getK8sCoreApi().createPersistentVolume(pv).execute();
+        conf.getCoreApi().createPersistentVolume(pv).execute();
     }
  
     public void createPVC() throws ApiException {
@@ -72,18 +72,18 @@ public class KVolume {
                 .addAccessModesItem(data.getAccessModes())
                 .volumeName(getKubernetesName()));
 
-        conf.getK8sCoreApi().createNamespacedPersistentVolumeClaim(conf.getConfig().getK8sNamespace(), pvc).execute();
+        conf.getCoreApi().createNamespacedPersistentVolumeClaim(conf.getConfig().getK8sNamespace(), pvc).execute();
     }
 
     public void deletePVC() throws ApiException {
-        CoreV1Api api = conf.getK8sCoreApi();
+        CoreV1Api api = conf.getCoreApi();
 
         if (pvc != null)
             api.deleteNamespacedPersistentVolumeClaim(getClaimName(), conf.getConfig().getK8sNamespace()).execute();
     }
 
     public void deletePV() throws ApiException {
-        CoreV1Api api = conf.getK8sCoreApi();
+        CoreV1Api api = conf.getCoreApi();
 
         if (pv != null)
             api.deletePersistentVolume(getKubernetesName()).execute();
@@ -94,7 +94,7 @@ public class KVolume {
      * @return
      */
     public boolean isAvailable() {
-        CoreV1Api api = conf.getK8sCoreApi();
+        CoreV1Api api = conf.getCoreApi();
         
         try {
             V1PersistentVolume requestPv = api.readPersistentVolume(getKubernetesName()).execute();
@@ -112,7 +112,7 @@ public class KVolume {
 
     public static KVolume retrieve(KVolumeData data) {
         KConfiguration conf = KConfiguration.getInstance();
-        CoreV1Api api = conf.getK8sCoreApi();
+        CoreV1Api api = conf.getCoreApi();
 
         try {
             KVolume volume = new KVolume(conf, data);
