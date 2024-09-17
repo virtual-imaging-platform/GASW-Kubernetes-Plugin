@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -15,6 +16,8 @@ import fr.insalyon.creatis.gasw.execution.GaswStatus;
 import fr.insalyon.creatis.gasw.executor.kubernetes.KMonitor;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.KConfiguration;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.KConstants;
+import fr.insalyon.creatis.gasw.executor.kubernetes.config.json.properties.KConfig;
+import fr.insalyon.creatis.gasw.executor.kubernetes.config.json.properties.KVolumeData;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Namespace;
@@ -26,8 +29,9 @@ import lombok.extern.log4j.Log4j;
 public class KManager {
 
     private String						workflowName;
-    private KVolume 					volume;
-    private KVolume					    sharedVolume;
+    private KVolume 					workflowVolume;
+    private List<KVolume>				customVolumes;
+    private KConfig                     config;
     
     private volatile ArrayList<KJob> 	jobs;
     private Boolean						end;
@@ -37,24 +41,20 @@ public class KManager {
         this.workflowName = workflowName;
         this.jobs = new ArrayList<KJob>();
         this.init = null;
+        this.config = KConfiguration.getInstance().getConfig();
+        this.customVolumes = new ArrayList<KVolume>();
     }
 
     public void init() {
-        KConfiguration conf = KConfiguration.getInstance();
 
         System.err.println("K8s Manager init with " + workflowName);
         try {
             checkNamespace();
             System.err.println("Namespaces checked !");
-            checkSharedVolume();
+            checkAllVolumes();
             System.err.println("SharedUser volume checked !");
             checkOutputsDir();
             System.err.println("User ouputs directories checked !");
-
-            volume = new KVolume(conf, workflowName, "ReadWriteMany");
-            volume.createPV();
-            volume.createPVC();
-            System.err.println("Workflow volume created !");
 
             init = true;
         } catch (Exception e) {
@@ -67,15 +67,15 @@ public class KManager {
         end = true;
 
         try {
-            if (this.volume != null)
-                volume.deletePVC();
-            if (this.volume != null)
-                volume.deletePV();
+            if (this.workflowVolume != null)
+                workflowVolume.deletePVC();
+            if (this.workflowVolume != null)
+                workflowVolume.deletePV();
             
             for (KJob job : jobs) {
                 job.clean();
             }
-            volume = null;
+            workflowVolume = null;
         } catch (ApiException e) {
             log.error("Failed to destroy the manager");
         }
@@ -88,7 +88,7 @@ public class KManager {
     public void checkNamespace() throws ApiException {
         CoreV1Api api = KConfiguration.getInstance().getK8sCoreApi();
         V1NamespaceList list = api.listNamespace().execute();
-        String targetName = KConfiguration.getInstance().getK8sNamespace();
+        String targetName = config.getK8sNamespace();
         
         for (V1Namespace ns : list.getItems()) {
             String name = ns.getMetadata().getName();
@@ -104,18 +104,33 @@ public class KManager {
     }
     
     /**
-     * Check if the /workflows/sharedata volume exist 
+     * Check all of the volumes presents inside the config
      */
-    public void checkSharedVolume() throws ApiException {
-        KVolume sharedUserVolume = KVolume.retrieve("SharedData", "ReadOnlyMany");
+    public void checkAllVolumes() throws ApiException {
+        // workflow
+        KVolumeData workflowVolumeData = new KVolumeData();
 
-        if (sharedUserVolume == null) {
-            sharedUserVolume = new KVolume(KConfiguration.getInstance(), "SharedData", "ReadOnlyMany");
+        workflowVolumeData.setName(workflowName);
+        workflowVolumeData.setMountPathContainer(KConstants.workflowsLocation + workflowName);
+        workflowVolumeData.setAccessModes("ReadWriteMany");
+        workflowVolumeData.setNfsFolder(workflowName);
 
-            sharedUserVolume.createPV();
-            sharedUserVolume.createPVC();
+        workflowVolume = new KVolume(KConfiguration.getInstance(), workflowVolumeData);
+        workflowVolume.createPV();
+        workflowVolume.createPVC();
+
+        // others
+        for (KVolumeData configVolume : config.getVolumes()) {
+            KVolume kVolume = KVolume.retrieve(configVolume);
+
+            if (kVolume == null) {
+                kVolume = new KVolume(KConfiguration.getInstance(), configVolume);
+
+                kVolume.createPV();
+                kVolume.createPVC();
+            }
+            customVolumes.add(kVolume);
         }
-        sharedVolume = sharedUserVolume;
     }
 
     /**
@@ -141,7 +156,7 @@ public class KManager {
         while (true) {
             if (init != null && init == true) {
                 return true;
-            } else if (i < KConstants.maxRetryToPush || (init != null && init == false)) {
+            } else if (i < config.getOptions().getMaxRetryToPush() || (init != null && init == false)) {
                 Utils.sleepNException(10000);
             } else {
                 return false;
@@ -169,12 +184,15 @@ public class KManager {
      */
     public void submitter(String cmd, String dockerImage, String jobID) {
         KJob exec = new KJob(jobID, workflowName);
+        List<KVolume> volumes = new ArrayList<>();
 
+        volumes.add(workflowVolume);
+        volumes.addAll(customVolumes);
         if (isReady()) {
             exec.getData().setCommand(cmd);
             exec.getData().setImage(dockerImage);
-            exec.getData().setVolumes(Arrays.asList(volume, sharedVolume));
-            exec.getData().setWorkingDir(KConstants.mountPathContainer + volume.getName());
+            exec.getData().setVolumes(volumes);
+            exec.getData().setWorkingDir(workflowVolume.getData().getMountPathContainer());
             exec.configure();
             submitter(exec);
         } else {
@@ -224,8 +242,13 @@ public class KManager {
         }
 
         private synchronized void checker() {
-            if (!ready && volume.isAvailable() && sharedVolume.isAvailable())
+            if (!ready && workflowVolume.isAvailable()) {
+                for (KVolume custom : customVolumes) {
+                    if (custom.isAvailable() ==  false)
+                        break;
+                }
                 ready = true;
+            }
         }
     }
 

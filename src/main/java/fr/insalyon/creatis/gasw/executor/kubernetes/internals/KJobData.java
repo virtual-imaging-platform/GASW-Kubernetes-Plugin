@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import fr.insalyon.creatis.gasw.execution.GaswStatus;
-import fr.insalyon.creatis.gasw.executor.kubernetes.config.KConstants;
 import io.kubernetes.client.openapi.models.V1Container;
 import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimVolumeSource;
@@ -100,7 +99,7 @@ public class KJobData {
         for (KVolume vol : getKVolumes()) {
             V1VolumeMount item = new V1VolumeMount()
                 .name(vol.getKubernetesName())
-                .mountPath(KConstants.mountPathContainer + vol.getName());
+                .mountPath(vol.getData().getMountPathContainer());
 
             volumesMounts.add(item);
         }

@@ -4,7 +4,6 @@ import java.util.Arrays;
 
 import fr.insalyon.creatis.gasw.execution.GaswStatus;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.KConfiguration;
-import fr.insalyon.creatis.gasw.executor.kubernetes.config.KConstants;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.BatchV1Api;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
@@ -61,7 +60,7 @@ public class KJob {
 
     private GaswStatus getStatusRequest(BatchV1Api api) {
         try {
-            V1Job updatedJob = api.readNamespacedJob(data.getJob().getMetadata().getName(), conf.getK8sNamespace()).execute();
+            V1Job updatedJob = api.readNamespacedJob(data.getJob().getMetadata().getName(), conf.getConfig().getK8sNamespace()).execute();
             V1JobStatus status = updatedJob.getStatus();
 
             if (status.getFailed() != null && status.getFailed() > 0)
@@ -84,7 +83,7 @@ public class KJob {
      * @param container
      */
     public void configure() {
-        V1ObjectMeta meta = new V1ObjectMeta().name(data.getKubernetesJobID()).namespace(conf.getK8sNamespace());
+        V1ObjectMeta meta = new V1ObjectMeta().name(data.getKubernetesJobID()).namespace(conf.getConfig().getK8sNamespace());
 
         V1PodSpec podSpec = new V1PodSpec()
             .containers(Arrays.asList(data.getContainer()))
@@ -94,7 +93,7 @@ public class KJob {
         V1PodTemplateSpec podspecTemplate = new V1PodTemplateSpec().spec(podSpec);
 
         V1JobSpec jobSpec = new V1JobSpec()
-            .ttlSecondsAfterFinished(KConstants.ttlJob)
+            .ttlSecondsAfterFinished(conf.getConfig().getOptions().getTtlJob())
             .template(podspecTemplate)
             .backoffLimit(0);
 
@@ -114,7 +113,7 @@ public class KJob {
         if (data.getJob() == null) {
             log.error("Impossible to start job value is null (may not be configured)");
         } else {
-            api.createNamespacedJob(conf.getK8sNamespace(), data.getJob()).execute();
+            api.createNamespacedJob(conf.getConfig().getK8sNamespace(), data.getJob()).execute();
             data.setStatus(GaswStatus.SUCCESSFULLY_SUBMITTED);
         }
     }
@@ -129,7 +128,7 @@ public class KJob {
         if (data.getStatus() == GaswStatus.NOT_SUBMITTED)
             return ;
         if (data.getJob() != null) {
-            api.deleteNamespacedJob(data.getJob().getMetadata().getName(), conf.getK8sNamespace())
+            api.deleteNamespacedJob(data.getJob().getMetadata().getName(), conf.getConfig().getK8sNamespace())
                 .propagationPolicy("Foreground").execute();
             data.setJob(null);
         }
@@ -158,12 +157,12 @@ public class KJob {
         if (data.getJob() != null) {
             if (status == GaswStatus.NOT_SUBMITTED)
                 return status;
-            for (int i = 0; i < KConstants.statusRetry; i++) {
+            for (int i = 0; i < conf.getConfig().getOptions().getStatusRetry(); i++) {
                 retrievedStatus = getStatusRequest(api);
 
                 if (retrievedStatus != GaswStatus.UNDEFINED)
                     return retrievedStatus;
-                Utils.sleepNException(KConstants.statusRetryWait);
+                Utils.sleepNException(conf.getConfig().getOptions().getStatusRetryWait());
             }
             return GaswStatus.STALLED;
         }
@@ -180,7 +179,7 @@ public class KJob {
         if (data.getJob() == null)
             return 1;
         try {
-            V1PodList podsList = coreApi.listNamespacedPod(conf.getK8sNamespace()).labelSelector("job-name=" + jobName).execute();
+            V1PodList podsList = coreApi.listNamespacedPod(conf.getConfig().getK8sNamespace()).labelSelector("job-name=" + jobName).execute();
             V1Pod pod = podsList.getItems().get(0);
             
             for (V1ContainerStatus status : pod.getStatus().getContainerStatuses()) {

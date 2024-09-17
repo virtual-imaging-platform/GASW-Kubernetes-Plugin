@@ -1,12 +1,10 @@
 package fr.insalyon.creatis.gasw.executor.kubernetes.config;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.Map;
-import org.json.JSONObject;
 
 import fr.insalyon.creatis.gasw.GaswException;
+import fr.insalyon.creatis.gasw.executor.kubernetes.config.json.ConfigBuilder;
+import fr.insalyon.creatis.gasw.executor.kubernetes.config.json.properties.KConfig;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.Configuration;
 import io.kubernetes.client.openapi.apis.BatchV1Api;
@@ -30,13 +28,7 @@ public class KConfiguration {
     private StorageV1Api			k8sStorageApi;
 
     // K8s configuration
-    private String					k8sAddress;
-    private String					k8sToken;
-    private String					k8sNamespace;
-
-    // NFS
-    private String					nfsAddress;
-    private String					nfsPath;
+    private KConfig                 config;
 
     public static KConfiguration getInstance() {
         if (instance == null)
@@ -50,21 +42,13 @@ public class KConfiguration {
     }
 
     private void loadConfiguration(String path) throws GaswException {
-        try {
-            String content = Files.readString(Paths.get(path));
-            Map<String, Object> map = new JSONObject(content).toMap();
-    
-            k8sAddress = map.get("k8s_address").toString();
-            k8sToken = map.get("k8s_token").toString();
-            k8sNamespace = map.get("k8s_namespace").toString();
-            nfsAddress = map.get("nfs_address").toString();
-            nfsPath = map.get("nfs_path").toString();
+        ConfigBuilder configBuilder = new ConfigBuilder(path);
+        config = configBuilder.get();
 
-            log.info("Configuration file was loaded successfully !");
-        } catch (IOException e) {
-            log.error(e.getStackTrace(), e);
+        if (config == null) {
             throw new GaswException("Client creation failed");
         }
+        System.err.println("Voici quelques données " + config.getVolumes().get(0).getNfsFolder() + " " + config.getVolumes().get(0).getName());
     }
     
     private void defineApis(ApiClient client) {
@@ -80,7 +64,7 @@ public class KConfiguration {
      */
     private void createLocalClient() throws GaswException {
         try {
-            ApiClient client = Config.fromConfig(KConstants.kubeConfig);
+            ApiClient client = Config.fromConfig(config.getK8sKubeConfig());
             Configuration.setDefaultApiClient(client);
             defineApis(client);
         } catch (IOException e) {
@@ -95,9 +79,9 @@ public class KConfiguration {
      */
     private void createRemoteClient() {
         ApiClient client = new ClientBuilder()
-            .setBasePath(k8sAddress)
+            .setBasePath(config.getK8sAddress())
             .setVerifyingSsl(false) // may need to change in production !
-            .setAuthentication(new AccessTokenAuthentication(k8sToken))
+            .setAuthentication(new AccessTokenAuthentication(config.getK8sToken()))
             .setCertificateAuthority(null) // may need to change in production !
             .build();
         defineApis(client);
