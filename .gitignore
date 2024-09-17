@@ -2,4 +2,3 @@ target/
 .idea
 .vscode
 *.json
-config.json

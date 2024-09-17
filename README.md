@@ -32,6 +32,9 @@ In the code there is *two statuses* (but represented by one variable):
 For example when the job is ready to be submitted we don't change the status for the client, for him it just in queued.  
 So, you just have to understand that sometimes the **KJobData.status** variable is *synchronized* with the *dao* and sometimes not.  
 
+### Configuration File
+There is an example configuration file provided in the repository and it should be located in **/var/www/cgi-bin/m2Server-gasw3/conf/kubernetes_plugin.conf**  
+
 ## Code
 ### Structure
 I've made a figma scheme the represent briefly the *code structure* of the plugin. 

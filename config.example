@@ -1,0 +1,23 @@
+{
+	"k8sAddress": "https://127.0.0.1:33239",
+	"k8sToken": "blabla",
+	"k8sKubeConfig": "/var/www/cgi-bin/m2Server-gasw3/conf/kubernetes_access",
+	"k8sNamespace": "default",
+	"nfsAddress": "192.168.122.180",
+	"nfsPath": "/var/www/html/workflows/",
+	"options": {
+		"ttlJob": "500",
+		"statusRetry": "5",
+		"statusRetryWait": "2000",
+		"maxRetryToPush": "5",
+		"storageClassName": ""
+	},
+	"volumes": [
+		{
+			"name": "SharedData",
+			"nfsFolder": "SharedData",
+			"mountPathContainer": "/var/www/html/workflows/SharedData",
+			"accessModes": "ReadOnlyMany"
+		}
+	]
+}
