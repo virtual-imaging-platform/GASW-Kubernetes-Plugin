@@ -3,7 +3,6 @@ package fr.insalyon.creatis.gasw.executor.kubernetes.config.json;
 import java.io.File;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.json.properties.KConfig;
 import lombok.extern.log4j.Log4j;
 

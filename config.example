@@ -6,9 +6,9 @@
 	"nfsAddress": "192.168.122.180",
 	"nfsPath": "/var/www/html/workflows/",
 	"options": {
-		"ttlJob": "500",
+		"ttlJob": "86400",
 		"statusRetry": "5",
-		"statusRetryWait": "2000",
+		"statusRetryWait": "5000",
 		"maxRetryToPush": "5",
 		"storageClassName": ""
 	},

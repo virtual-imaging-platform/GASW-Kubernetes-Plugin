@@ -12,10 +12,10 @@ import fr.insalyon.creatis.gasw.executor.kubernetes.internals.KManager;
 
 public class KOutputParser extends GaswOutputParser {
     
-    private File stdOut;
-    private File stdErr;
-    private KManager manager;
-    private String jobID;
+    private File        stdOut;
+    private File        stdErr;
+    private KManager    manager;
+    private String      jobID;
 
     public KOutputParser(String jobID, KManager manager) {
         super(jobID);
