@@ -214,11 +214,10 @@ public class KManager {
     }
 
     public KJob getJob(String jobId) {
-        for (KJob j : jobs) {
-            if (j.getData().getJobID() == jobId)
-                return j;
-        }
-        return null;
+        return jobs.stream()
+                .filter(job -> job.getData().getJobID().equals(jobId))
+                .findFirst()
+                .orElse(null);
     } 
 
     class KRunner implements Runnable {
