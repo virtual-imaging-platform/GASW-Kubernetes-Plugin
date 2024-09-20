@@ -13,7 +13,7 @@ public class KOutputParser extends GaswOutputParser {
     
     private File        stdOut;
     private File        stdErr;
-    private KJob        job;
+    final private KJob  job;
 
     public KOutputParser(KJob job) {
         super(job.getData().getJobID());
