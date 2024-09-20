@@ -77,7 +77,7 @@ public class KMonitor extends GaswMonitor {
                     System.err.println("job : " + kJob.getData().getJobID() + " final : " + job.getStatus());
                     
                     jobDAO.update(job);
-                    new KOutputParser(job.getId(), manager).start();
+                    new KOutputParser(kJob).start();
                 }
 
                 Thread.sleep(GaswConfiguration.getInstance().getDefaultSleeptime());

@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -202,15 +203,9 @@ public class KManager {
     }
 
     public ArrayList<KJob> getUnfinishedJobs() { 
-        ArrayList<KJob> copy = new ArrayList<KJob>(jobs);
-
-        System.err.println("[BEFORE-COPY] " + copy.toString());
-        Iterator<KJob> it = copy.iterator();
-        while (it.hasNext()) {
-            if (it.next().isTerminated())
-               it.remove();
-        }
-        return copy; 
+        return jobs.stream()
+               .filter(job -> !job.isTerminated())
+               .collect(Collectors.toCollection(ArrayList::new));
     }
 
     public KJob getJob(String jobId) {
