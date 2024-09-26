@@ -60,14 +60,6 @@ public class KJobData {
         wrappedCommand.add(0, "bash");
         wrappedCommand.add(1, "-c");
         wrappedCommand.add(2, redirectCmd + " " + getCommand());
-        // System.err.println("voici la command original : " + command.toString());
-        // System.err.println("voici la wrapped command : " + wrappedCommand.toString());
-
-        // List<String> fixed = new ArrayList<String>();
-        // fixed.add("/bin/sh");
-        // fixed.add("-c");
-        // fixed.add("sleep 50000");
-        // return fixed;
         return wrappedCommand;
     }
 

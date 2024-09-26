@@ -33,7 +33,6 @@ public class KJob {
     @Getter @Setter
     private boolean					terminated = false;
 
-
     public KJob(String jobID, String workflowName) {
         conf = KConfiguration.getInstance();
         data = new KJobData();

@@ -2,8 +2,6 @@ package fr.insalyon.creatis.gasw.executor.kubernetes.internals;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -109,12 +107,11 @@ public class KManager {
      */
     public void checkAllVolumes() throws ApiException {
         // workflow
-        KVolumeData workflowVolumeData = new KVolumeData();
-
-        workflowVolumeData.setName(workflowName);
-        workflowVolumeData.setMountPathContainer(KConstants.workflowsLocation + workflowName);
-        workflowVolumeData.setAccessModes("ReadWriteMany");
-        workflowVolumeData.setNfsFolder(workflowName);
+        KVolumeData workflowVolumeData = new KVolumeData()
+            .setName(workflowName)
+            .setMountPathContainer(KConstants.workflowsLocation + workflowName)
+            .setAccessModes("ReadWriteMany")
+            .setNfsFolder(workflowName);
 
         workflowVolume = new KVolume(KConfiguration.getInstance(), workflowVolumeData);
         workflowVolume.createPV();
@@ -244,7 +241,7 @@ public class KManager {
             }
             while (end == false) {
                 synchronized (this) {
-                    for (KJob exec : jobs) {
+                    for (KJob exec : getUnfinishedJobs()) {
                         if (exec.getStatus() == GaswStatus.NOT_SUBMITTED) {
                             exec.getData().setStatus(GaswStatus.QUEUED);
                             exec.start();
@@ -256,7 +253,7 @@ public class KManager {
         }
 
         private synchronized void checker() {
-            if (!ready && workflowVolume.isAvailable()) {
+            if ( ! ready && workflowVolume.isAvailable()) {
                 for (KVolume custom : customVolumes) {
                     if (custom.isAvailable() ==  false)
                         break;
