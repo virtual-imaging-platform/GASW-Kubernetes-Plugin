@@ -48,10 +48,11 @@ jobs:
         report_paths: '**/target/*-reports/TEST-*.xml'
         detailed_summary: true
         include_passed: true
-	
-	- name: CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
     # Optional: Uploads the full dependency graph to GitHub to improve the quality of Dependabot alerts this repository can receive
     - name: Update dependency graph
       uses: advanced-security/maven-dependency-submission-action@v4.0.2
       if: github.event_name != 'pull_request'
+
+    # Code anlysis
+    - name: CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
