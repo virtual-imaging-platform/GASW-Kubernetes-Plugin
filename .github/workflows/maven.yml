@@ -26,6 +26,9 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: MegaLinter
+      uses: oxsecurity/megalinter/flavors/cupcake@v8.0.0
+
     # Code analysis init (build must me after and before the analyse)
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
