@@ -1,28 +1,25 @@
 package fr.insalyon.creatis.gasw.executor.kubernetes.config.json;
 
 import java.io.File;
+import java.io.IOException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.json.properties.KConfig;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j;
 
-@Log4j
+@Log4j @RequiredArgsConstructor
 public class ConfigBuilder {
     
-    private String filePath;
-
-    public ConfigBuilder(String filePath) {
-        this.filePath = filePath;
-    }
+    final private String filePath;
 
     public KConfig get() {
-        ObjectMapper mapper = new ObjectMapper();
+        final ObjectMapper mapper = new ObjectMapper();
 
         try {
-            KConfig loadedConfig = mapper.readValue(new File(filePath), KConfig.class);
 
-            return loadedConfig;
-        } catch (Exception e) {
+            return mapper.readValue(new File(filePath), KConfig.class);
+        } catch (IOException  e) {
             log.error("Failed to read the configuration file", e);
             return null;
         }

@@ -17,13 +17,13 @@ import io.kubernetes.client.openapi.ApiException;
 import lombok.extern.log4j.Log4j;
 
 @Log4j
-public class KMonitor extends GaswMonitor {
+final public class KMonitor extends GaswMonitor {
 
-    private static KMonitor instance;
+    final private List<KJob>    finishedJobs;
+    private static KMonitor     instance;
     
-    private List<KJob>      finishedJobs;
-    private boolean 		stop;
-    private KManager	    manager;
+    private boolean 		    stop;
+    private KManager	        manager;
 
     public synchronized static KMonitor getInstance() {
         if (instance == null) {
@@ -37,15 +37,15 @@ public class KMonitor extends GaswMonitor {
 
     private KMonitor() {
         super();
-        finishedJobs = new ArrayList<KJob>();
+        finishedJobs = new ArrayList<>();
         stop = false;
     }
 
     private void statusChecker() {
-        ArrayList<KJob> jobs = manager.getUnfinishedJobs();
+        final ArrayList<KJob> jobs = manager.getUnfinishedJobs();
 
-        for (KJob j : jobs) {
-            GaswStatus stus = j.getStatus();
+        for (final KJob j : jobs) {
+            final GaswStatus stus = j.getStatus();
 
             System.err.println("job : " + j.getData().getJobID() + " : " + stus.toString());
             if (stus != GaswStatus.RUNNING && stus != GaswStatus.QUEUED && stus != GaswStatus.UNDEFINED && stus != GaswStatus.NOT_SUBMITTED) {
@@ -64,9 +64,9 @@ public class KMonitor extends GaswMonitor {
             statusChecker();
             try {
                 while (hasFinishedJobs()) {
-                    KJob kJob = pullFinishedJobID();
-                    GaswStatus status = kJob.getStatus();
-                    Job job = jobDAO.getJobByID(kJob.getData().getJobID());
+                    final KJob kJob = pullFinishedJobID();
+                    final GaswStatus status = kJob.getStatus();
+                    final Job job = jobDAO.getJobByID(kJob.getData().getJobID());
                     
                     if (status == GaswStatus.ERROR || status == GaswStatus.COMPLETED) {
                         job.setExitCode(kJob.getExitCode());
@@ -81,18 +81,15 @@ public class KMonitor extends GaswMonitor {
                 }
                 Thread.sleep(GaswConfiguration.getInstance().getDefaultSleeptime());
 
-            } catch (GaswException ex) {
-            } catch (DAOException ex) {
-                log.error(ex);
-            } catch (InterruptedException ex) {
-                log.error(ex);
+            } catch (GaswException | DAOException | InterruptedException e) {
+                log.error(e);
             }
         }
     }
 
     @Override
-    public synchronized void add(String jobID, String symbolicName, String fileName, String parameters) throws GaswException {
-        Job job = new Job(jobID, GaswConfiguration.getInstance().getSimulationID(),
+    public synchronized void add(final String jobID, final String symbolicName, final String fileName, final String parameters) throws GaswException {
+        final Job job = new Job(jobID, GaswConfiguration.getInstance().getSimulationID(),
             GaswStatus.QUEUED, symbolicName, fileName, parameters,
             KConstants.EXECUTOR_NAME);
 
@@ -108,7 +105,7 @@ public class KMonitor extends GaswMonitor {
     }
 
     public KJob pullFinishedJobID() {
-        KJob lastJob = finishedJobs.get(0);
+        final KJob lastJob = finishedJobs.get(0);
 
         finishedJobs.remove(lastJob);
         return lastJob;
@@ -118,7 +115,7 @@ public class KMonitor extends GaswMonitor {
         return ! finishedJobs.isEmpty();
     }
 
-    public synchronized void addFinishedJob(KJob job) {
+    public synchronized void addFinishedJob(final KJob job) {
         finishedJobs.add(job);
     }
 
@@ -130,9 +127,9 @@ public class KMonitor extends GaswMonitor {
         }
     }
 
-    public void updateJob(String jobID, GaswStatus status) {
+    public void updateJob(final String jobID, final GaswStatus status) {
         try {
-            var job = jobDAO.getJobByID(jobID);
+            final Job job = jobDAO.getJobByID(jobID);
 
             if (job.getStatus() != status) {
                 job.setStatus(status);
@@ -145,11 +142,12 @@ public class KMonitor extends GaswMonitor {
     }
 
     @Override
-    protected void kill(Job job) {
-        KJob kJob = manager.getJob(job.getId());
+    protected void kill(final Job job) {
+        final KJob kJob = manager.getJob(job.getId());
 
-        if (kJob == null)
+        if (kJob == null) {
             return ;
+        }
         try {
             kJob.kill();
         } catch (ApiException e) {

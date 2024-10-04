@@ -1,10 +1,12 @@
 package fr.insalyon.creatis.gasw.executor.kubernetes.internals;
 
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import fr.insalyon.creatis.gasw.execution.GaswStatus;
 import io.kubernetes.client.openapi.models.V1Container;
@@ -13,7 +15,7 @@ import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimVolumeSource;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
 
-@Getter @Setter
+@Getter @Setter @NoArgsConstructor
 public class KJobData {
 
     private String          workflowName;
@@ -28,21 +30,21 @@ public class KJobData {
 
     private GaswStatus      status;
 
-    public void setVolumes(List<KVolume> volumes) {
+    public void setVolumes(final List<KVolume> volumes) {
         this.kVolumes = volumes;
         container.volumeMounts(getVolumesMounts());
     }
 
-    public void setCommand(String command) {
+    public void setCommand(final String command) {
         this.command = command;
         container.command(getWrappedCommand());
     }
 
-    public void setImage(String image) {
+    public void setImage(final String image) {
         container.image(image);
     }
 
-    public void setWorkingDir(String workingDir) {
+    public void setWorkingDir(final String workingDir) {
         container.workingDir(workingDir);
     }
 
@@ -51,11 +53,11 @@ public class KJobData {
      * @return Initial command redirected to out & err files
      */
     private List<String> getWrappedCommand() {
-        List<String> wrappedCommand = new ArrayList<String>();
+        final List<String> wrappedCommand = new ArrayList<>();
 
-        String redirectStdout = "> " + getContainerLogPath("out") + " ";
-        String redirectStderr = "2> " + getContainerLogPath("err");
-        String redirectCmd = "exec " + redirectStdout + redirectStderr + ";";
+        final String redirectStdout = "> " + getContainerLogPath("out") + " ";
+        final String redirectStderr = "2> " + getContainerLogPath("err");
+        final String redirectCmd = "exec " + redirectStdout + redirectStderr + ";";
 
         wrappedCommand.add(0, "bash");
         wrappedCommand.add(1, "-c");
@@ -67,34 +69,26 @@ public class KJobData {
      * @param extension (out or err)
      * @return file that contain the log (inside container)
      */
-    private String getContainerLogPath(String extension) {
+    private String getContainerLogPath(final String extension) {
         return "./" + extension + "/" + getJobID()+ ".sh" + "." + extension;
     }
 
     public List<V1Volume> getVolumes() {
-        List<V1Volume> volumesConverted = new ArrayList<V1Volume>();
-
-        for (KVolume vol : getKVolumes()) {
-            V1Volume item = new V1Volume()
+        return getKVolumes().stream()
+            .map(vol -> new V1Volume()
                 .name(vol.getKubernetesName())
                 .persistentVolumeClaim(new V1PersistentVolumeClaimVolumeSource()
-                    .claimName(vol.getClaimName()));
-
-            volumesConverted.add(item);
-        }
-        return volumesConverted;
+                    .claimName(vol.getClaimName()))
+            )
+            .collect(Collectors.toList());
     }
 
     public List<V1VolumeMount> getVolumesMounts() {
-        List<V1VolumeMount> volumesMounts = new ArrayList<V1VolumeMount>();
-
-        for (KVolume vol : getKVolumes()) {
-            V1VolumeMount item = new V1VolumeMount()
+        return getKVolumes().stream()
+            .map(vol -> new V1VolumeMount()
                 .name(vol.getKubernetesName())
-                .mountPath(vol.getData().getMountPathContainer());
-
-            volumesMounts.add(item);
-        }
-        return volumesMounts;
+                .mountPath(vol.getData().getMountPathContainer())
+            )
+            .collect(Collectors.toList());
     }
 }

@@ -11,22 +11,19 @@ import fr.insalyon.creatis.gasw.executor.kubernetes.internals.KJob;
 
 public class KOutputParser extends GaswOutputParser {
     
-    private File        stdOut;
-    private File        stdErr;
     final private KJob  job;
 
-    public KOutputParser(KJob job) {
+    public KOutputParser(final KJob job) {
         super(job.getData().getJobID());
         this.job = job;
     }
 
     @Override
     public GaswOutput getGaswOutput() throws GaswException {
+        final File stdOut = getAppStdFile(GaswConstants.OUT_EXT, GaswConstants.OUT_ROOT);
+        final File stdErr = getAppStdFile(GaswConstants.ERR_EXT, GaswConstants.ERR_ROOT);
         GaswExitCode gaswExitCode = GaswExitCode.EXECUTION_CANCELED;
         int exitCode;
-
-        stdOut = getAppStdFile(GaswConstants.OUT_EXT, GaswConstants.OUT_ROOT);
-        stdErr = getAppStdFile(GaswConstants.ERR_EXT, GaswConstants.ERR_ROOT);
 
         moveProvenanceFile(".");
 
@@ -49,6 +46,8 @@ public class KOutputParser extends GaswOutputParser {
             case 7:
                 gaswExitCode = GaswExitCode.ERROR_WRITE_LOCAL;
                 break;
+            default:
+                gaswExitCode = GaswExitCode.UNDEFINED;
         }
 
         return new GaswOutput(job.getData().getJobID(), gaswExitCode, "", uploadedResults,

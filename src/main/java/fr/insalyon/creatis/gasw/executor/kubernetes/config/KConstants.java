@@ -3,9 +3,12 @@ package fr.insalyon.creatis.gasw.executor.kubernetes.config;
 public class KConstants {
 
     // Plugin
-    public static String pluginConfig = "/var/www/cgi-bin/m2Server-gasw3/conf/kubernetes_plugin.json";
-    public static String workflowsLocation = "/var/www/html/workflows/";
+    final public static String pluginConfig = "/var/www/cgi-bin/m2Server-gasw3/conf/kubernetes_plugin.json";
+    final public static String workflowsLocation = "/var/www/html/workflows/";
 
     // GASW
-    public static String EXECUTOR_NAME = "Kubernetes";
+    final public static String EXECUTOR_NAME = "Kubernetes";
+
+    // Kubernetes HTTP CODE
+    final public static int NOT_FOUND_CODE = 404;
 }

@@ -2,6 +2,7 @@ package fr.insalyon.creatis.gasw.executor.kubernetes.internals;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -22,26 +23,26 @@ import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1NamespaceList;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
+import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j;
 
 @Log4j
 public class KManager {
 
-    private String						workflowName;
+    final private String				workflowName;
+    final private List<KVolume>		    customVolumes;
+    final private KConfig               config;
     private KVolume 					workflowVolume;
-    private List<KVolume>				customVolumes;
-    private KConfig                     config;
     
     private volatile ArrayList<KJob> 	jobs;
     private Boolean						end;
-    private Boolean						init;
+    private Boolean						inited;
 
-    public KManager(String workflowName) {
+    public KManager(final String workflowName) {
         this.workflowName = workflowName;
-        this.jobs = new ArrayList<KJob>();
-        this.init = null;
+        this.jobs = new ArrayList<>();
         this.config = KConfiguration.getInstance().getConfig();
-        this.customVolumes = new ArrayList<KVolume>();
+        this.customVolumes = new ArrayList<>();
     }
 
     public void init() {
@@ -55,10 +56,10 @@ public class KManager {
             checkOutputsDir();
             System.err.println("User ouputs directories checked !");
 
-            init = true;
-        } catch (Exception e) {
+            inited = true;
+        } catch (ApiException e) {
             log.error("Failed to init the manager", e);
-            init = false;
+            inited = false;
         }
     }
 
@@ -66,15 +67,13 @@ public class KManager {
         end = true;
 
         try {
-            if (this.workflowVolume != null)
+            if (this.workflowVolume != null) {
                 workflowVolume.deletePVC();
-            if (this.workflowVolume != null)
                 workflowVolume.deletePV();
-            
-            for (KJob job : jobs) {
+            }
+            for (final KJob job : jobs) {
                 job.clean();
             }
-            workflowVolume = null;
         } catch (ApiException e) {
             log.error("Failed to destroy the manager");
         }
@@ -85,18 +84,19 @@ public class KManager {
      * if it isn't here, then it is created
      */
     public void checkNamespace() throws ApiException {
-        CoreV1Api api = KConfiguration.getInstance().getCoreApi();
-        V1NamespaceList list = api.listNamespace().execute();
-        String targetName = config.getK8sNamespace();
+        final CoreV1Api api = KConfiguration.getInstance().getCoreApi();
+        final V1NamespaceList list = api.listNamespace().execute();
+        final String targetName = config.getK8sNamespace();
         
-        for (V1Namespace ns : list.getItems()) {
-            String name = ns.getMetadata().getName();
+        for (final V1Namespace ns : list.getItems()) {
+            final String name = ns.getMetadata().getName();
             
-            if (name.equals(targetName))
+            if (name.equals(targetName)) {
                 return;
+            }
         }
 
-        V1Namespace ns = new V1Namespace()
+        final V1Namespace ns = new V1Namespace()
             .metadata(new V1ObjectMeta().name(targetName));
 
         api.createNamespace(ns).execute();
@@ -107,18 +107,18 @@ public class KManager {
      */
     public void checkAllVolumes() throws ApiException {
         // workflow
-        KVolumeData workflowVolumeData = new KVolumeData()
+        final KVolumeData wVolumeData = new KVolumeData()
             .setName(workflowName)
             .setMountPathContainer(KConstants.workflowsLocation + workflowName)
             .setAccessModes("ReadWriteMany")
             .setNfsFolder(workflowName);
 
-        workflowVolume = new KVolume(KConfiguration.getInstance(), workflowVolumeData);
+        workflowVolume = new KVolume(KConfiguration.getInstance(), wVolumeData);
         workflowVolume.createPV();
         workflowVolume.createPVC();
 
         // others
-        for (KVolumeData configVolume : config.getVolumes()) {
+        for (final KVolumeData configVolume : config.getVolumes()) {
             KVolume kVolume = KVolume.retrieve(configVolume);
 
             if (kVolume == null) {
@@ -135,14 +135,15 @@ public class KManager {
      * Check for existance of STDOUR and STDERR from the plugin machine.
      */
     public void checkOutputsDir() {
-        String[] dirs = { GaswConstants.OUT_ROOT, GaswConstants.ERR_ROOT, "./cache" };
-        
-        for (String dirName : dirs) {
-            File dir = new File(dirName);
+        final String[] dirs = { GaswConstants.OUT_ROOT, GaswConstants.ERR_ROOT, "./cache" };
 
-            if ( ! dir.exists())
-                dir.mkdirs();
-        }
+        Arrays.stream(dirs)
+            .map(File::new)
+            .forEach(dir -> {
+                if ( ! dir.exists()) {
+                    dir.mkdirs();
+                }
+            });
     }
 
     /**
@@ -152,10 +153,10 @@ public class KManager {
         int i = 0;
 
         while (true) {
-            if (init != null && init == true) {
+            if (inited != null && inited == true) {
                 return true;
-            } else if (i < config.getOptions().getMaxRetryToPush() || (init != null && init == false)) {
-                Utils.sleepNException(10000);
+            } else if (i < config.getOptions().getMaxRetryToPush() || (inited != null && inited == false)) {
+                Utils.sleepNException(10_000);
             } else {
                 return false;
             }
@@ -164,10 +165,12 @@ public class KManager {
     }
 
     /**
-     * Create a thread instance that will launch job when ressources are available (volumes)
-     * The end variable is used to know if a thread instance has already been launched.
+     * Create a thread instance that will launch job when ressources
+     * are available (volumes).
+     * The end variable is used to know if a thread instance 
+     * has already been launched.
      */
-    private void submitter(KJob exec) {
+    private void submitter(final KJob exec) {
         if (end == null) {
             end = false;
             new Thread(this.new KRunner()).start();
@@ -178,11 +181,12 @@ public class KManager {
     }
 
     /**
-     * Public submitter that prepare the K8sJob object and wait for the manager to be initied (in case of slow cluster)
+     * Public submitter that prepare the K8sJob object and wait for 
+     * the manager to be initied (in case of slow cluster)
      */
-    public void submitter(String cmd, String dockerImage, String jobID) {
-        KJob exec = new KJob(jobID, workflowName);
-        List<KVolume> volumes = new ArrayList<>();
+    public void submitter(final String cmd, final String dockerImage, final String jobID) {
+        final KJob exec = new KJob(jobID, workflowName);
+        final List<KVolume> volumes = new ArrayList<>();
 
         volumes.add(workflowVolume);
         volumes.addAll(customVolumes);
@@ -205,13 +209,14 @@ public class KManager {
                .collect(Collectors.toCollection(ArrayList::new));
     }
 
-    public KJob getJob(String jobId) {
+    public KJob getJob(final String jobId) {
         return jobs.stream()
                 .filter(job -> job.getData().getJobID().equals(jobId))
                 .findFirst()
                 .orElse(null);
     } 
 
+    @NoArgsConstructor
     class KRunner implements Runnable {
         private Boolean ready = false;
         private DateTime startedTime;
@@ -221,27 +226,30 @@ public class KManager {
             try {
                 startedTime = DateTime.now();
                 loop();
-            } catch (GaswException e) {
+            } catch (GaswException | ApiException | InterruptedException e) {
                 log.error(e.getMessage());
-            } catch (Exception e) {
                 log.error("Something bad happened during the K8sRunner", e);
+            }
+        }
+
+        private void sleep() throws GaswException, InterruptedException {
+            final Duration diff = new Duration(startedTime, DateTime.now());
+
+            if (diff.getStandardSeconds() > config.getOptions().getTimeToVolumeBeReady()) {
+                throw new GaswException("Volume wasn't eady in 2 minutes, aborting !");
+            } else {
+                checker();
+                Thread.sleep(GaswConfiguration.getInstance().getDefaultSleeptime());
             }
         }
 
         private void loop() throws ApiException, InterruptedException, GaswException {
             while (ready == false) {
-                Duration diff = new Duration(startedTime, DateTime.now());
-                
-                if (diff.getStandardSeconds() > 120)
-                    throw new GaswException("Volume wasn't eady in 2 minutes, aborting !");
-                else {
-                    checker();
-                    Thread.sleep(GaswConfiguration.getInstance().getDefaultSleeptime());
-                }
+                sleep();
             }
             while (end == false) {
                 synchronized (this) {
-                    for (KJob exec : getUnfinishedJobs()) {
+                    for (final KJob exec : getUnfinishedJobs()) {
                         if (exec.getStatus() == GaswStatus.NOT_SUBMITTED) {
                             exec.getData().setStatus(GaswStatus.QUEUED);
                             exec.start();
@@ -254,9 +262,10 @@ public class KManager {
 
         private synchronized void checker() {
             if ( ! ready && workflowVolume.isAvailable()) {
-                for (KVolume custom : customVolumes) {
-                    if (custom.isAvailable() ==  false)
+                for (final KVolume custom : customVolumes) {
+                    if (custom.isAvailable() ==  false) {
                         break;
+                    }
                 }
                 ready = true;
             }

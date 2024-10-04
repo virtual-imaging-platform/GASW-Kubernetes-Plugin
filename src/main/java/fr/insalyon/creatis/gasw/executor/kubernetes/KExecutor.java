@@ -7,11 +7,13 @@ import fr.insalyon.creatis.gasw.executor.kubernetes.config.KConfiguration;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.KConstants;
 import fr.insalyon.creatis.gasw.executor.kubernetes.internals.KManager;
 import fr.insalyon.creatis.gasw.plugin.ExecutorPlugin;
+import lombok.NoArgsConstructor;
+
 import java.util.ArrayList;
 import java.util.List;
 import net.xeoh.plugins.base.annotations.PluginImplementation;
 
-@PluginImplementation
+@PluginImplementation @NoArgsConstructor
 public class KExecutor implements ExecutorPlugin {
 
     private KSubmit     k8sSubmit;
@@ -24,9 +26,9 @@ public class KExecutor implements ExecutorPlugin {
     }
 
     @Override
-    public void load(GaswInput gaswInput) throws GaswException {
+    public void load(final GaswInput gaswInput) throws GaswException {
         if ( ! loaded) {
-            KConfiguration conf = KConfiguration.getInstance();
+            final KConfiguration conf = KConfiguration.getInstance();
 
             conf.init(KConstants.pluginConfig);
             manager = new KManager(GaswConfiguration.getInstance().getSimulationID());
@@ -41,7 +43,7 @@ public class KExecutor implements ExecutorPlugin {
 
     @Override
     public List<Class> getPersistentClasses() throws GaswException {
-        return new ArrayList<Class>();
+        return new ArrayList<>();
     }
 
     @Override

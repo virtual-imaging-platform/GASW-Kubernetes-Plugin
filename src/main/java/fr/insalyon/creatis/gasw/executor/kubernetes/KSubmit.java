@@ -17,9 +17,9 @@ import lombok.extern.log4j.Log4j;
 @Log4j
 public class KSubmit extends GaswSubmit {
 
-    private KManager 			manager;
+    final private KManager 	    manager;
 
-    public KSubmit(GaswInput gaswInput, KMinorStatusGenerator minorStatusServiceGenerator, KManager manager) throws GaswException {
+    public KSubmit(final GaswInput gaswInput, final KMinorStatusGenerator minorStatusServiceGenerator, final KManager manager) throws GaswException {
         super(gaswInput, minorStatusServiceGenerator);
         this.manager = manager;
         scriptName = generateScript();
@@ -27,12 +27,11 @@ public class KSubmit extends GaswSubmit {
 
     @Override
     public String submit() throws GaswException {
-        String fileName = scriptName.substring(0, scriptName.lastIndexOf("."));
-        StringBuilder params = new StringBuilder();
+        final String fileName = scriptName.substring(0, scriptName.lastIndexOf("."));
+        final StringBuilder params = new StringBuilder();
 
-        for (String p : gaswInput.getParameters()) {
-            params.append(p);
-            params.append(" ");
+        for (final String p : gaswInput.getParameters()) {
+            params.append(p + " ");
         }
 
         KMonitor.getInstance().add(fileName, gaswInput.getExecutableName(), fileName, params.toString());
@@ -42,17 +41,18 @@ public class KSubmit extends GaswSubmit {
         return fileName;
     }
 
-    private void wrappedSubmit(String jobID) throws GaswException {
+    private void wrappedSubmit(final String jobID) throws GaswException {
         try {
             // GAWS DAO
-            JobDAO jobDAO = DAOFactory.getDAOFactory().getJobDAO();
-            Job job = jobDAO.getJobByID(jobID);
+            final JobDAO jobDAO = DAOFactory.getDAOFactory().getJobDAO();
+            final Job job = jobDAO.getJobByID(jobID);
+
             job.setStatus(GaswStatus.QUEUED);
             job.setDownload(new Date());
             jobDAO.update(job);
 
             // Kubernetes
-            String cmd = "bash " + GaswConstants.SCRIPT_ROOT + "/" + scriptName;
+            final String cmd = "bash " + GaswConstants.SCRIPT_ROOT + "/" + scriptName;
             manager.submitter(cmd, "ethaaalpha/podman-boutiques:latest", jobID);
 
         } catch (DAOException e) {

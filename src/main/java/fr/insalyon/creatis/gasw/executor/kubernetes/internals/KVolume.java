@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Map;
 
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.KConfiguration;
+import fr.insalyon.creatis.gasw.executor.kubernetes.config.KConstants;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.json.properties.KVolumeData;
 import io.kubernetes.client.custom.Quantity;
 import io.kubernetes.client.openapi.ApiException;
@@ -16,9 +17,10 @@ import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimSpec;
 import io.kubernetes.client.openapi.models.V1PersistentVolumeSpec;
 import io.kubernetes.client.openapi.models.V1VolumeResourceRequirements;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j;
 
-@Log4j
+@Log4j @RequiredArgsConstructor
 public class KVolume {
 
     private final KConfiguration	conf;
@@ -27,15 +29,7 @@ public class KVolume {
     private V1PersistentVolumeClaim pvc;
 
     @Getter
-    private KVolumeData             data;
-
-    /**
-     * @param accessPermissions : "ReadWriteMany" or "ReadOnlyMany"
-     */
-    public KVolume(KConfiguration conf, KVolumeData data) {
-        this.conf = conf;
-        this.data = data;
-    }
+    final private KVolumeData       data;
 
     public String getClaimName() { return getKubernetesName() + "-claim"; }
     public String getNfsSubMountPath() { return conf.getConfig().getNfsPath() + data.getNfsFolder() + "/"; }
@@ -76,17 +70,19 @@ public class KVolume {
     }
 
     public void deletePVC() throws ApiException {
-        CoreV1Api api = conf.getCoreApi();
+        final CoreV1Api api = conf.getCoreApi();
 
-        if (pvc != null)
+        if (pvc != null) {
             api.deleteNamespacedPersistentVolumeClaim(getClaimName(), conf.getConfig().getK8sNamespace()).execute();
+        }
     }
 
     public void deletePV() throws ApiException {
-        CoreV1Api api = conf.getCoreApi();
+        final CoreV1Api api = conf.getCoreApi();
 
-        if (pv != null)
+        if (pv != null) {
             api.deletePersistentVolume(getKubernetesName()).execute();
+        }
     }
 
     /**
@@ -94,37 +90,37 @@ public class KVolume {
      * @return
      */
     public boolean isAvailable() {
-        CoreV1Api api = conf.getCoreApi();
+        final CoreV1Api api = conf.getCoreApi();
         
         try {
-            V1PersistentVolume requestPv = api.readPersistentVolume(getKubernetesName()).execute();
-            V1PersistentVolumeClaim requestPvc = api.readNamespacedPersistentVolumeClaim(getClaimName(), conf.getConfig().getK8sNamespace()).execute();
+            final V1PersistentVolume requestPv = api.readPersistentVolume(getKubernetesName()).execute();
+            final V1PersistentVolumeClaim requestPvc = api.readNamespacedPersistentVolumeClaim(getClaimName(), conf.getConfig().getK8sNamespace()).execute();
         
             System.err.println(requestPv.getStatus().getPhase() + " | " + requestPvc.getStatus().getPhase());
-            if (requestPv.getStatus().getPhase().equals("Bound") && requestPvc.getStatus().getPhase().equals("Bound"))
-                return true;
-            return false;
+            return "Bound".equalsIgnoreCase(requestPv.getStatus().getPhase()) && "Bound".equalsIgnoreCase(requestPvc.getStatus().getPhase());
+
         } catch (ApiException e) {
             log.error("Failed to check if the volume PV and PVC were available !", e);
             return false;
         }
     }
 
-    public static KVolume retrieve(KVolumeData data) {
-        KConfiguration conf = KConfiguration.getInstance();
-        CoreV1Api api = conf.getCoreApi();
+    public static KVolume retrieve(final KVolumeData data) {
+        final KConfiguration conf = KConfiguration.getInstance();
+        final CoreV1Api api = conf.getCoreApi();
 
         try {
-            KVolume volume = new KVolume(conf, data);
-            V1PersistentVolume pv = api.readPersistentVolume(volume.getKubernetesName()).execute();
-            V1PersistentVolumeClaim pvc = api.readNamespacedPersistentVolumeClaim(volume.getClaimName(), conf.getConfig().getK8sNamespace()).execute();
+            final KVolume volume = new KVolume(conf, data);
+            final V1PersistentVolume pv = api.readPersistentVolume(volume.getKubernetesName()).execute();
+            final V1PersistentVolumeClaim pvc = api.readNamespacedPersistentVolumeClaim(volume.getClaimName(), conf.getConfig().getK8sNamespace()).execute();
 
             volume.pv = pv;
             volume.pvc = pvc;
             return volume;
         } catch (ApiException e) {
-            if (e.getCode() != 404)
+            if (e.getCode() != KConstants.NOT_FOUND_CODE) {
                 log.error("Failed to retrieve the volume " + data.getName() + " exist (pv and pvc)");
+            }
             return null;
         }
     }

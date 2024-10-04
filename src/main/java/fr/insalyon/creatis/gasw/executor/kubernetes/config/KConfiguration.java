@@ -14,10 +14,11 @@ import io.kubernetes.client.util.ClientBuilder;
 import io.kubernetes.client.util.Config;
 import io.kubernetes.client.util.credentials.AccessTokenAuthentication;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j;
 
 
-@Getter @Log4j
+@Getter @Log4j @NoArgsConstructor
 public class KConfiguration {
 
     private static KConfiguration instance;
@@ -31,18 +32,19 @@ public class KConfiguration {
     private KConfig                 config;
 
     public static KConfiguration getInstance() {
-        if (instance == null)
+        if (instance == null) {
             instance = new KConfiguration();
+        }
         return instance;
     }
 
-    public void init(String configurationFile) throws GaswException {
+    public void init(final String configurationFile) throws GaswException {
         loadConfiguration(configurationFile);
         createLocalClient();
     }
 
-    private void loadConfiguration(String path) throws GaswException {
-        ConfigBuilder configBuilder = new ConfigBuilder(path);
+    private void loadConfiguration(final String path) throws GaswException {
+        final ConfigBuilder configBuilder = new ConfigBuilder(path);
         config = configBuilder.get();
 
         if (config == null) {
@@ -51,7 +53,7 @@ public class KConfiguration {
         System.err.println("Voici quelques données " + config.getVolumes().get(0).getNfsFolder() + " " + config.getVolumes().get(0).getName());
     }
     
-    private void defineApis(ApiClient client) {
+    private void defineApis(final ApiClient client) {
         coreApi = new CoreV1Api(client);
         batchApi =  new BatchV1Api(client);
         storageApi = new StorageV1Api(client);
@@ -64,7 +66,8 @@ public class KConfiguration {
      */
     private void createLocalClient() throws GaswException {
         try {
-            ApiClient client = Config.fromConfig(config.getK8sKubeConfig());
+            final ApiClient client = Config.fromConfig(config.getK8sKubeConfig());
+
             Configuration.setDefaultApiClient(client);
             defineApis(client);
         } catch (IOException e) {
@@ -78,12 +81,13 @@ public class KConfiguration {
      * @implNote You should have an admin access to the cluster otherwise bad things could happen.
      */
     private void createRemoteClient() {
-        ApiClient client = new ClientBuilder()
+        final ApiClient client = new ClientBuilder()
             .setBasePath(config.getK8sAddress())
             .setVerifyingSsl(false) // may need to change in production !
             .setAuthentication(new AccessTokenAuthentication(config.getK8sToken()))
             .setCertificateAuthority(null) // may need to change in production !
             .build();
+
         defineApis(client);
     }
 }

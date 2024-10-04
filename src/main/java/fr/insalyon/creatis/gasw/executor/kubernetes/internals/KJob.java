@@ -29,11 +29,11 @@ public class KJob {
     private final KConfiguration 	conf;
 
     @Getter
-    private KJobData                data;
+    final private KJobData          data;
     @Getter @Setter
     private boolean					terminated = false;
 
-    public KJob(String jobID, String workflowName) {
+    public KJob(final String jobID, final String workflowName) {
         conf = KConfiguration.getInstance();
         data = new KJobData();
         data.setJobID(jobID);
@@ -47,7 +47,7 @@ public class KJob {
             .securityContext(new V1SecurityContext().privileged(true)));
     }
 
-    private void setKubernetesJobID(String baseName) {
+    private void setKubernetesJobID(final String baseName) {
         for (int i = baseName.length() - 1; i > 0; i--) {
             if ( ! Character.isDigit(baseName.charAt(i))) {
                 data.setKubernetesJobID(baseName.substring(i + 1, baseName.length()));
@@ -57,19 +57,20 @@ public class KJob {
         data.setKubernetesJobID(data.getWorkflowName().toLowerCase() + "-" + data.getKubernetesJobID());
     }
 
-    private GaswStatus getStatusRequest(BatchV1Api api) {
+    private GaswStatus getStatusRequest(final BatchV1Api api) {
         try {
-            V1Job updatedJob = api.readNamespacedJob(data.getJob().getMetadata().getName(), conf.getConfig().getK8sNamespace()).execute();
-            V1JobStatus status = updatedJob.getStatus();
+            final V1Job updatedJob = api.readNamespacedJob(data.getJob().getMetadata().getName(), conf.getConfig().getK8sNamespace()).execute();
+            final V1JobStatus status = updatedJob.getStatus();
 
-            if (status.getFailed() != null && status.getFailed() > 0)
+            if (status.getFailed() != null && status.getFailed() > 0) {
                 return GaswStatus.ERROR;
-            else if (status.getActive() != null && status.getActive() > 0)
+            } else if (status.getActive() != null && status.getActive() > 0) {
                 return GaswStatus.RUNNING;
-            else if (status.getSucceeded() != null && status.getSucceeded() > 0)
+            } else if (status.getSucceeded() != null && status.getSucceeded() > 0) {
                 return GaswStatus.COMPLETED;
-            else
+            } else {
                 return GaswStatus.QUEUED;
+            }
         } catch (ApiException e) {
             log.info("Impossible de récuperer l'état du job" + e.getStackTrace());
             return GaswStatus.UNDEFINED;
@@ -82,16 +83,16 @@ public class KJob {
      * @param container
      */
     public void configure() {
-        V1ObjectMeta meta = new V1ObjectMeta().name(data.getKubernetesJobID()).namespace(conf.getConfig().getK8sNamespace());
+        final V1ObjectMeta meta = new V1ObjectMeta().name(data.getKubernetesJobID()).namespace(conf.getConfig().getK8sNamespace());
 
-        V1PodSpec podSpec = new V1PodSpec()
+        final V1PodSpec podSpec = new V1PodSpec()
             .containers(Arrays.asList(data.getContainer()))
             .restartPolicy("Never")
             .volumes(data.getVolumes());
 
-        V1PodTemplateSpec podspecTemplate = new V1PodTemplateSpec().spec(podSpec);
+        final V1PodTemplateSpec podspecTemplate = new V1PodTemplateSpec().spec(podSpec);
 
-        V1JobSpec jobSpec = new V1JobSpec()
+        final V1JobSpec jobSpec = new V1JobSpec()
             .ttlSecondsAfterFinished(conf.getConfig().getOptions().getTtlJob())
             .template(podspecTemplate)
             .backoffLimit(0);
@@ -107,7 +108,7 @@ public class KJob {
      * @throws ApiException
      */
     public void start() throws ApiException {
-        BatchV1Api api = conf.getBatchApi();
+        final BatchV1Api api = conf.getBatchApi();
 
         if (data.getJob() == null) {
             log.error("Impossible to start job value is null (may not be configured)");
@@ -122,11 +123,9 @@ public class KJob {
      * @throws ApiException
      */
     public void kill() throws ApiException {
-        BatchV1Api api = conf.getBatchApi();
+        final BatchV1Api api = conf.getBatchApi();
 
-        if (data.getStatus() == GaswStatus.NOT_SUBMITTED)
-            return ;
-        if (data.getJob() != null) {
+        if (data.getStatus() != GaswStatus.NOT_SUBMITTED && data.getJob() != null) {
             api.deleteNamespacedJob(data.getJob().getMetadata().getName(), conf.getConfig().getK8sNamespace())
                 .propagationPolicy("Foreground").execute();
             data.setJob(null);
@@ -138,8 +137,9 @@ public class KJob {
      * @throws ApiException
      */
     public void clean() throws ApiException {
-        if (data.getJob() != null && isTerminated())
+        if (data.getJob() != null && isTerminated()) {
             kill();
+        }
     }
 
     /**
@@ -147,20 +147,23 @@ public class KJob {
      * @return GaswStatus.UNDEFINED means that the job weren't configured
      */
     public GaswStatus getStatus() {
-        BatchV1Api api = conf.getBatchApi();
+        final BatchV1Api api = conf.getBatchApi();
+        final GaswStatus status = data.getStatus();
         GaswStatus retrievedStatus;
-        GaswStatus status = data.getStatus();
 
-        if (status == GaswStatus.STALLED)
+        if (status == GaswStatus.STALLED) {
             return status;
+        }
         if (data.getJob() != null) {
-            if (status == GaswStatus.NOT_SUBMITTED)
+            if (status == GaswStatus.NOT_SUBMITTED) {
                 return status;
+            }
             for (int i = 0; i < conf.getConfig().getOptions().getStatusRetry(); i++) {
                 retrievedStatus = getStatusRequest(api);
 
-                if (retrievedStatus != GaswStatus.UNDEFINED)
+                if (retrievedStatus != GaswStatus.UNDEFINED) {
                     return retrievedStatus;
+                }
                 Utils.sleepNException(conf.getConfig().getOptions().getStatusRetryWait());
             }
             return GaswStatus.STALLED;
@@ -172,22 +175,25 @@ public class KJob {
      * @implNote Should be adapted if multiple containers / pods per job
      */
     public Integer getExitCode() {
-        CoreV1Api coreApi = conf.getCoreApi();
-        String jobName = data.getJob().getMetadata().getName();
+        final CoreV1Api coreApi = conf.getCoreApi();
+        final String jobName = data.getJob().getMetadata().getName();
 
-        if (data.getJob() == null)
+        if (data.getJob() == null) {
             return 1;
+        }
         try {
-            V1PodList podsList = coreApi.listNamespacedPod(conf.getConfig().getK8sNamespace()).labelSelector("job-name=" + jobName).execute();
-            V1Pod pod = podsList.getItems().get(0);
+            final V1PodList podsList = coreApi.listNamespacedPod(conf.getConfig().getK8sNamespace()).labelSelector("job-name=" + jobName).execute();
+            final V1Pod pod = podsList.getItems().get(0);
             
-            for (V1ContainerStatus status : pod.getStatus().getContainerStatuses()) {
-                V1ContainerStateTerminated end = status.getState().getTerminated();
-                if (end != null && end.getExitCode() != 0)
+            for (final V1ContainerStatus status : pod.getStatus().getContainerStatuses()) {
+                final V1ContainerStateTerminated end = status.getState().getTerminated();
+
+                if (end != null && end.getExitCode() != 0) {
                     return end.getExitCode();
+                }
             }
             return 0;
-        } catch (Exception e) {
+        } catch (ApiException e) {
             return 1;
         }
     }
