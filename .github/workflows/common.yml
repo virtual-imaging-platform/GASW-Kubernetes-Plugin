@@ -1,0 +1,19 @@
+# This is the template for the all of the JAVA VIP projects workflow CI integration
+
+name: VIP CI Integration
+
+on:
+  push:
+    branches: [develop, master]
+  pull_request:
+    branches: [develop]
+
+jobs:
+  review:
+    uses: virtual-imaging-platform/vip-github-actions/.github/workflows/pmd.yml@develop
+    with:
+      quality: 95
+  
+  build:
+    uses: virtual-imaging-platform/vip-github-actions/.github/workflows/maven.yml@develop
+  
