@@ -22,3 +22,5 @@ jobs:
 
       - name: Maven
         uses: virtual-imaging-platform/vip-github-actions/.github/actions/maven@develop
+        with:
+          maven_password: ${{ secrets.NEXUS_PSW }}
