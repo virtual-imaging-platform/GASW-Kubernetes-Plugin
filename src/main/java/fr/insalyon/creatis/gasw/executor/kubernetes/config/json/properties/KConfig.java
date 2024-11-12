@@ -28,6 +28,9 @@ public class KConfig {
     @JsonProperty(value = "nfsPath", required = true)
     private String nfsPath;
 
+    @JsonProperty(value = "workflowsLocation", required = true)
+    private String workflowsLocation;
+
     @JsonProperty("options")
     private KOptions options;
 

@@ -9,19 +9,19 @@ import lombok.Setter;
 @Getter @Setter @NoArgsConstructor
 public class KOptions {
     
-    @JsonProperty("ttlJob") 
+    @JsonProperty("ttlJobInSeconds")
     private int ttlJob = 500;
     
     @JsonProperty("statusRetry")
     private int statusRetry = 5;
     
-    @JsonProperty("statusRetryWait")
+    @JsonProperty("statusRetryWaitInMillis")
     private int statusRetryWait = 2000;
 
     @JsonProperty("maxRetryToPush")
     private int maxRetryToPush = 5;
 
-    @JsonProperty("timeToVolumeBeReady")
+    @JsonProperty("timeToVolumeBeReadyInSeconds")
     private int timeToVolumeBeReady = 120;
 
     @JsonProperty("storageClassName")

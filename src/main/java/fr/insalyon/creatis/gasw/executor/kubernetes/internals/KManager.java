@@ -109,7 +109,7 @@ public class KManager {
         // workflow
         final KVolumeData wVolumeData = new KVolumeData()
             .setName(workflowName)
-            .setMountPathContainer(KConstants.workflowsLocation + workflowName)
+            .setMountPathContainer(config.getWorkflowsLocation() + workflowName)
             .setAccessModes("ReadWriteMany")
             .setNfsFolder(workflowName);
 
@@ -198,7 +198,6 @@ public class KManager {
             exec.configure();
             submitter(exec);
         } else {
-            KMonitor.getInstance().addFinishedJob(exec);
             exec.getData().setStatus(GaswStatus.STALLED);
         }
     }
