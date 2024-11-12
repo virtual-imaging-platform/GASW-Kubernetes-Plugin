@@ -1,8 +1,6 @@
 package fr.insalyon.creatis.gasw.executor.kubernetes;
 
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
 import fr.insalyon.creatis.gasw.GaswConfiguration;
 import fr.insalyon.creatis.gasw.GaswException;
@@ -19,67 +17,54 @@ import lombok.extern.log4j.Log4j;
 @Log4j
 final public class KMonitor extends GaswMonitor {
 
-    final private List<KJob>    finishedJobs;
-    private static KMonitor     instance;
-    
     private boolean 		    stop;
     private KManager	        manager;
 
-    public synchronized static KMonitor getInstance() {
-        if (instance == null) {
-            instance = new KMonitor();
-            instance.start();
-        }
-        return instance;
-    }
-
     public void setManager(KManager manager) { this.manager = manager; }
 
-    private KMonitor() {
+    public KMonitor() {
         super();
-        finishedJobs = new ArrayList<>();
         stop = false;
     }
 
-    private void statusChecker() {
-        final ArrayList<KJob> jobs = manager.getUnfinishedJobs();
-
-        for (final KJob j : jobs) {
-            final GaswStatus stus = j.getStatus();
-
-            if (stus != GaswStatus.RUNNING && stus != GaswStatus.QUEUED && stus != GaswStatus.UNDEFINED && stus != GaswStatus.NOT_SUBMITTED) {
-                j.setTerminated(true);
-                finishedJobs.add(j);
-            } else if (stus ==  GaswStatus.RUNNING) {
-                updateJob(j.getData().getJobID(), stus);
-            }
-        }
+    private boolean notRunningJob(GaswStatus s) {
+        return s != GaswStatus.RUNNING
+        && s != GaswStatus.QUEUED
+        && s != GaswStatus.UNDEFINED
+        && s != GaswStatus.NOT_SUBMITTED;
     }
 
     @Override
     public void run() {
         while (!stop) {
-            statusChecker();
             try {
-                while (hasFinishedJobs()) {
-                    final KJob kJob = pullFinishedJobID();
-                    final GaswStatus status = kJob.getStatus();
-                    final Job job = jobDAO.getJobByID(kJob.getData().getJobID());
+                for (final KJob job : manager.getUnfinishedJobs()) {
+                    final Job daoJob = jobDAO.getJobByID(job.getData().getJobID());
+                    final GaswStatus status = job.getStatus();
                     
-                    if (status == GaswStatus.ERROR || status == GaswStatus.COMPLETED) {
-                        job.setExitCode(kJob.getExitCode());
-                        job.setStatus(job.getExitCode() == 0 ? GaswStatus.COMPLETED : GaswStatus.ERROR);
-                    } else {
-                        job.setStatus(status);
+                    if (notRunningJob(status)) {
+                        job.setTerminated(true);
+                        if (status == GaswStatus.ERROR || status == GaswStatus.COMPLETED) {
+                            daoJob.setExitCode(job.getExitCode());
+                            daoJob.setStatus(job.getExitCode() == 0 ? GaswStatus.COMPLETED : GaswStatus.ERROR);
+                        } else {
+                            daoJob.setStatus(status);
+                        }
+
+                        jobDAO.update(daoJob);
+                        new KOutputParser(job).start();
+
+                    } else if (status == GaswStatus.RUNNING) {
+                        updateJob(job.getData().getJobID(), status);
                     }
-                    
-                    jobDAO.update(job);
-                    new KOutputParser(kJob).start();
                 }
                 Thread.sleep(GaswConfiguration.getInstance().getDefaultSleeptime());
 
-            } catch (GaswException | DAOException | InterruptedException e) {
-                log.error(e);
+            } catch (GaswException | DAOException ex) {
+                log.error("Ignored exception !", ex);
+            } catch (InterruptedException ex) {
+                log.error("Interrupted exception, stopping the worker !");
+                finish();
             }
         }
     }
@@ -101,27 +86,9 @@ final public class KMonitor extends GaswMonitor {
         }
     }
 
-    public KJob pullFinishedJobID() {
-        final KJob lastJob = finishedJobs.get(0);
-
-        finishedJobs.remove(lastJob);
-        return lastJob;
-    }
-
-    public boolean hasFinishedJobs() {
-        return ! finishedJobs.isEmpty();
-    }
-
-    public synchronized void addFinishedJob(final KJob job) {
-        finishedJobs.add(job);
-    }
-
     public synchronized void finish() {
-        if (instance != null) {
-            log.info("Monitor is off !");
-            instance.stop = true;
-            instance = null;
-        }
+        log.info("Monitor is off !");
+        this.stop = true;
     }
 
     public void updateJob(final String jobID, final GaswStatus status) {
@@ -129,6 +96,10 @@ final public class KMonitor extends GaswMonitor {
             final Job job = jobDAO.getJobByID(jobID);
 
             if (job.getStatus() != status) {
+                if (status == GaswStatus.RUNNING) {
+                    job.setDownload(new Date());
+                }
+
                 job.setStatus(status);
                 jobDAO.update(job);
             }

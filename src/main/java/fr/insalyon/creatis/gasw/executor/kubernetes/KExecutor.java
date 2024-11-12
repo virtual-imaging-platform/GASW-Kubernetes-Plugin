@@ -16,8 +16,9 @@ import net.xeoh.plugins.base.annotations.PluginImplementation;
 @PluginImplementation @NoArgsConstructor
 public class KExecutor implements ExecutorPlugin {
 
-    private KSubmit     k8sSubmit;
+    private KSubmit     submitter;
     private KManager    manager;
+    private KMonitor    monitor;
     private boolean     loaded = false;
 
     @Override
@@ -34,11 +35,11 @@ public class KExecutor implements ExecutorPlugin {
             manager = new KManager(GaswConfiguration.getInstance().getSimulationID());
             manager.init();
 
-            KMonitor.getInstance().setManager(manager);
+            monitor = new KMonitor();
+            monitor.setManager(manager);
             loaded = true;
         }
-        
-        k8sSubmit = new KSubmit(gaswInput, new KMinorStatusGenerator(), manager);
+        submitter = new KSubmit(gaswInput, new KMinorStatusGenerator(), manager, monitor);
     }
 
     @Override
@@ -48,7 +49,7 @@ public class KExecutor implements ExecutorPlugin {
 
     @Override
     public String submit() throws GaswException {
-        return k8sSubmit.submit();
+        return submitter.submit();
     }
 
     @Override
@@ -57,6 +58,6 @@ public class KExecutor implements ExecutorPlugin {
         manager.destroy();
 
         // Gasw
-        KMonitor.getInstance().finish();
+        monitor.finish();
     }
 }
