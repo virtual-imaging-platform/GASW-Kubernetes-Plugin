@@ -42,7 +42,7 @@ public class KVolume {
     }
     
     public void createPV () throws ApiException {
-        System.err.println("Volume creation submitted for " + getKubernetesName());
+        log.info("Volume creation submitted for " + getKubernetesName());
         pv = new V1PersistentVolume()
             .metadata(new V1ObjectMeta().name(getKubernetesName()))
             .spec(new V1PersistentVolumeSpec()
@@ -56,7 +56,7 @@ public class KVolume {
     }
  
     public void createPVC() throws ApiException {
-        System.err.println("VolumeClaim creation submitted for " + getClaimName());
+        log.info("VolumeClaim creation submitted for " + getClaimName());
         pvc = new V1PersistentVolumeClaim()
             .metadata(new V1ObjectMeta().name(getClaimName()).namespace(conf.getConfig().getK8sNamespace()))
             .spec(new V1PersistentVolumeClaimSpec()
@@ -96,7 +96,6 @@ public class KVolume {
             final V1PersistentVolume requestPv = api.readPersistentVolume(getKubernetesName()).execute();
             final V1PersistentVolumeClaim requestPvc = api.readNamespacedPersistentVolumeClaim(getClaimName(), conf.getConfig().getK8sNamespace()).execute();
         
-            System.err.println(requestPv.getStatus().getPhase() + " | " + requestPvc.getStatus().getPhase());
             return "Bound".equalsIgnoreCase(requestPv.getStatus().getPhase()) && "Bound".equalsIgnoreCase(requestPvc.getStatus().getPhase());
 
         } catch (ApiException e) {

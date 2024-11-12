@@ -50,7 +50,6 @@ public class KConfiguration {
         if (config == null) {
             throw new GaswException("Client creation failed");
         }
-        System.err.println("Voici quelques données " + config.getVolumes().get(0).getNfsFolder() + " " + config.getVolumes().get(0).getName());
     }
     
     private void defineApis(final ApiClient client) {

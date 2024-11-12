@@ -47,7 +47,6 @@ final public class KMonitor extends GaswMonitor {
         for (final KJob j : jobs) {
             final GaswStatus stus = j.getStatus();
 
-            System.err.println("job : " + j.getData().getJobID() + " : " + stus.toString());
             if (stus != GaswStatus.RUNNING && stus != GaswStatus.QUEUED && stus != GaswStatus.UNDEFINED && stus != GaswStatus.NOT_SUBMITTED) {
                 j.setTerminated(true);
                 finishedJobs.add(j);
@@ -60,7 +59,6 @@ final public class KMonitor extends GaswMonitor {
     @Override
     public void run() {
         while (!stop) {
-            System.err.println("je fais le check des jobs en cours !");
             statusChecker();
             try {
                 while (hasFinishedJobs()) {
@@ -74,7 +72,6 @@ final public class KMonitor extends GaswMonitor {
                     } else {
                         job.setStatus(status);
                     }
-                    System.err.println("job : " + kJob.getData().getJobID() + " final : " + job.getStatus());
                     
                     jobDAO.update(job);
                     new KOutputParser(kJob).start();
@@ -100,7 +97,7 @@ final public class KMonitor extends GaswMonitor {
             jobDAO.update(job);
 
         } catch (DAOException ex) {
-            System.err.println(ex.getMessage());
+            log.error("Failed to add the job", ex);
         }
     }
 
@@ -121,7 +118,7 @@ final public class KMonitor extends GaswMonitor {
 
     public synchronized void finish() {
         if (instance != null) {
-            System.err.println("Monitor is off !");
+            log.info("Monitor is off !");
             instance.stop = true;
             instance = null;
         }
@@ -134,7 +131,6 @@ final public class KMonitor extends GaswMonitor {
             if (job.getStatus() != status) {
                 job.setStatus(status);
                 jobDAO.update(job);
-                System.err.println("je viens de mettre à jour le job " + job.getId() + " sur le statut " + status.toString());
             }
         } catch (DAOException e) {
             log.error(e);

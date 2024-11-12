@@ -4,7 +4,7 @@ import fr.insalyon.creatis.gasw.execution.GaswMinorStatusServiceGenerator;
 import lombok.NoArgsConstructor;
 
 /**
- * @version DEPRECRATED CLASS
+ * @deprecated
  */
 @NoArgsConstructor
 public class KMinorStatusGenerator extends GaswMinorStatusServiceGenerator {

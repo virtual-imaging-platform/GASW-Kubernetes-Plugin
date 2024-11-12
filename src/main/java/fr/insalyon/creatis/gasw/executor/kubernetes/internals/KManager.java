@@ -47,14 +47,14 @@ public class KManager {
 
     public void init() {
 
-        System.err.println("K8s Manager init with " + workflowName);
+        log.info("K8s Manager init with " + workflowName);
         try {
             checkNamespace();
-            System.err.println("Namespaces checked !");
+            log.info("Namespaces checked !");
             checkAllVolumes();
-            System.err.println("SharedUser volume checked !");
+            log.info("SharedUser volume checked");
             checkOutputsDir();
-            System.err.println("User ouputs directories checked !");
+            log.info("User outputs directories checked !");
 
             inited = true;
         } catch (ApiException e) {
