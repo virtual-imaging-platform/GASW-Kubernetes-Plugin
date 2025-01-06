@@ -2,12 +2,12 @@
 
 name: VIP CI Integration
 env: # beware env value are of string type, not boolean. Need to use fromJSON to convert them to boolean
-  isProduction: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
+  isProduction: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
   prepareRelease: ${{ github.event_name == 'push' && github.ref_name == 'develop' && contains(github.event.head_commit.message, 'prepare release') }}
 
 on:
   push:
-    branches: [develop, master]
+    branches: [develop, main]
   pull_request:
     branches: [develop]
   workflow_dispatch:
