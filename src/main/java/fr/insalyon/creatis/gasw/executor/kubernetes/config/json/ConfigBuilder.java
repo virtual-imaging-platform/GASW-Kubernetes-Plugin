@@ -8,9 +8,10 @@ import fr.insalyon.creatis.gasw.executor.kubernetes.config.json.properties.KConf
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j;
 
-@Log4j @RequiredArgsConstructor
+@Log4j
+@RequiredArgsConstructor
 public class ConfigBuilder {
-    
+
     final private String filePath;
 
     public KConfig get() {
@@ -19,7 +20,7 @@ public class ConfigBuilder {
         try {
 
             return mapper.readValue(new File(filePath), KConfig.class);
-        } catch (IOException  e) {
+        } catch (IOException e) {
             log.error("Failed to read the configuration file", e);
             return null;
         }

@@ -26,12 +26,13 @@ import lombok.extern.log4j.Log4j;
 @Log4j
 public class KJob {
 
-    private final KConfiguration 	conf;
+    private final KConfiguration conf;
 
     @Getter
-    final private KJobData          data;
-    @Getter @Setter
-    private boolean					terminated = false;
+    final private KJobData data;
+    @Getter
+    @Setter
+    private boolean terminated = false;
 
     public KJob(final String jobID, final String workflowName) {
         conf = KConfiguration.getInstance();
@@ -43,8 +44,8 @@ public class KJob {
         setKubernetesJobID(jobID);
 
         data.setContainer(new V1Container()
-            .name(data.getKubernetesJobID())    
-            .securityContext(new V1SecurityContext().privileged(true)));
+                .name(data.getKubernetesJobID())
+                .securityContext(new V1SecurityContext().privileged(true)));
     }
 
     private void setKubernetesJobID(final String baseName) {
@@ -59,7 +60,9 @@ public class KJob {
 
     private GaswStatus getStatusRequest(final BatchV1Api api) {
         try {
-            final V1Job updatedJob = api.readNamespacedJob(data.getJob().getMetadata().getName(), conf.getConfig().getK8sNamespace()).execute();
+            final V1Job updatedJob = api
+                    .readNamespacedJob(data.getJob().getMetadata().getName(), conf.getConfig().getK8sNamespace())
+                    .execute();
             final V1JobStatus status = updatedJob.getStatus();
 
             if (status.getFailed() != null && status.getFailed() > 0) {
@@ -79,32 +82,35 @@ public class KJob {
 
     /**
      * This create the V1Job item and configure alls specs
+     * 
      * @apiNote Can be easilly upgraded to List<V1Container>
      * @param container
      */
     public void configure() {
-        final V1ObjectMeta meta = new V1ObjectMeta().name(data.getKubernetesJobID()).namespace(conf.getConfig().getK8sNamespace());
+        final V1ObjectMeta meta = new V1ObjectMeta().name(data.getKubernetesJobID())
+                .namespace(conf.getConfig().getK8sNamespace());
 
         final V1PodSpec podSpec = new V1PodSpec()
-            .containers(Arrays.asList(data.getContainer()))
-            .restartPolicy("Never")
-            .volumes(data.getVolumes());
+                .containers(Arrays.asList(data.getContainer()))
+                .restartPolicy("Never")
+                .volumes(data.getVolumes());
 
         final V1PodTemplateSpec podspecTemplate = new V1PodTemplateSpec().spec(podSpec);
 
         final V1JobSpec jobSpec = new V1JobSpec()
-            .ttlSecondsAfterFinished(conf.getConfig().getOptions().getTtlJob())
-            .template(podspecTemplate)
-            .backoffLimit(0);
+                .ttlSecondsAfterFinished(conf.getConfig().getOptions().getTtlJob())
+                .template(podspecTemplate)
+                .backoffLimit(0);
 
         data.setJob(new V1Job()
-            .spec(jobSpec)
-            .metadata(meta));
+                .spec(jobSpec)
+                .metadata(meta));
         data.setStatus(GaswStatus.NOT_SUBMITTED);
     }
 
     /**
      * Send the request against the kubernetes cluster to create the job
+     * 
      * @throws ApiException
      */
     public void start() throws ApiException {
@@ -120,6 +126,7 @@ public class KJob {
 
     /**
      * Kill method stop running pods and erase job for k8s api memory.
+     * 
      * @throws ApiException
      */
     public void kill() throws ApiException {
@@ -127,13 +134,14 @@ public class KJob {
 
         if (data.getStatus() != GaswStatus.NOT_SUBMITTED && data.getJob() != null) {
             api.deleteNamespacedJob(data.getJob().getMetadata().getName(), conf.getConfig().getK8sNamespace())
-                .propagationPolicy("Foreground").execute();
+                    .propagationPolicy("Foreground").execute();
             data.setJob(null);
         }
     }
 
     /**
      * This function do the same as kill but check for the status to be terminated.
+     * 
      * @throws ApiException
      */
     public void clean() throws ApiException {
@@ -143,7 +151,8 @@ public class KJob {
     }
 
     /**
-     * @apiNote The function retry X times with a sleep of Y depending on K8sConstants.
+     * @apiNote The function retry X times with a sleep of Y depending on
+     *          K8sConstants.
      * @return GaswStatus.UNDEFINED means that the job weren't configured
      */
     public GaswStatus getStatus() {
@@ -163,8 +172,13 @@ public class KJob {
 
                 if (retrievedStatus != GaswStatus.UNDEFINED) {
                     return retrievedStatus;
+                } else {
+                    try {
+                        Thread.sleep(conf.getConfig().getOptions().getStatusRetryWait());
+                    } catch (InterruptedException e) {
+                        log.error("Interrupted exception at getStatus: ", e);
+                    }
                 }
-                Utils.sleepNException(conf.getConfig().getOptions().getStatusRetryWait());
             }
             return GaswStatus.STALLED;
         }
@@ -182,9 +196,10 @@ public class KJob {
             return 1;
         }
         try {
-            final V1PodList podsList = coreApi.listNamespacedPod(conf.getConfig().getK8sNamespace()).labelSelector("job-name=" + jobName).execute();
+            final V1PodList podsList = coreApi.listNamespacedPod(conf.getConfig().getK8sNamespace())
+                    .labelSelector("job-name=" + jobName).execute();
             final V1Pod pod = podsList.getItems().get(0);
-            
+
             for (final V1ContainerStatus status : pod.getStatus().getContainerStatuses()) {
                 final V1ContainerStateTerminated end = status.getState().getTerminated();
 

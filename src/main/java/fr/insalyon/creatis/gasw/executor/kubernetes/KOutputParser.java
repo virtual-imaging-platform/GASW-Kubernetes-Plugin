@@ -10,8 +10,8 @@ import fr.insalyon.creatis.gasw.execution.GaswOutputParser;
 import fr.insalyon.creatis.gasw.executor.kubernetes.internals.KJob;
 
 public class KOutputParser extends GaswOutputParser {
-    
-    final private KJob  job;
+
+    final private KJob job;
 
     public KOutputParser(final KJob job) {
         super(job.getData().getJobID());

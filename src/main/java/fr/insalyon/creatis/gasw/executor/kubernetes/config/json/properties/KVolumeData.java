@@ -7,7 +7,10 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-@Getter @Setter @Accessors(chain = true) @NoArgsConstructor
+@Getter
+@Setter
+@Accessors(chain = true)
+@NoArgsConstructor
 public class KVolumeData {
 
     @JsonProperty(value = "name", required = true)

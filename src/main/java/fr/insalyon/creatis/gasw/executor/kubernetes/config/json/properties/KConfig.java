@@ -7,9 +7,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@Getter @NoArgsConstructor
+@Getter
+@NoArgsConstructor
 public class KConfig {
-    
+
     @JsonProperty(value = "k8sAddress", required = true)
     private String k8sAddress;
 

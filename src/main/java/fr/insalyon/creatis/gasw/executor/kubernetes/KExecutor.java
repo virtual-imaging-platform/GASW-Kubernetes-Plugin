@@ -13,13 +13,14 @@ import java.util.ArrayList;
 import java.util.List;
 import net.xeoh.plugins.base.annotations.PluginImplementation;
 
-@PluginImplementation @NoArgsConstructor
+@PluginImplementation
+@NoArgsConstructor
 public class KExecutor implements ExecutorPlugin {
 
-    private KSubmit     submitter;
-    private KManager    manager;
-    private KMonitor    monitor;
-    private boolean     loaded = false;
+    private KSubmit submitter;
+    private KManager manager;
+    private KMonitor monitor;
+    private boolean loaded = false;
 
     @Override
     public String getName() {

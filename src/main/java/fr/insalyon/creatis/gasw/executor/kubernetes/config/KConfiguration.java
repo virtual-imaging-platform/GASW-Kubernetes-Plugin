@@ -17,19 +17,20 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j;
 
-
-@Getter @Log4j @NoArgsConstructor
+@Getter
+@Log4j
+@NoArgsConstructor
 public class KConfiguration {
 
     private static KConfiguration instance;
 
     // K8s objects
-    private CoreV1Api				coreApi;
-    private BatchV1Api				batchApi;
-    private StorageV1Api			storageApi;
+    private CoreV1Api coreApi;
+    private BatchV1Api batchApi;
+    private StorageV1Api storageApi;
 
     // K8s configuration
-    private KConfig                 config;
+    private KConfig config;
 
     public static KConfiguration getInstance() {
         if (instance == null) {
@@ -51,15 +52,15 @@ public class KConfiguration {
             throw new GaswException("Client creation failed");
         }
     }
-    
+
     private void defineApis(final ApiClient client) {
         coreApi = new CoreV1Api(client);
-        batchApi =  new BatchV1Api(client);
+        batchApi = new BatchV1Api(client);
         storageApi = new StorageV1Api(client);
 
         log.info("Apis were defined successffully");
     }
-    
+
     /**
      * To use when use .kube local config, useful for debug and develop
      */
@@ -77,15 +78,17 @@ public class KConfiguration {
 
     /**
      * To use in production mode with generated K8s credentials
-     * @implNote You should have an admin access to the cluster otherwise bad things could happen.
+     * 
+     * @implNote You should have an admin access to the cluster otherwise bad things
+     *           could happen.
      */
     private void createRemoteClient() {
         final ApiClient client = new ClientBuilder()
-            .setBasePath(config.getK8sAddress())
-            .setVerifyingSsl(false) // may need to change in production !
-            .setAuthentication(new AccessTokenAuthentication(config.getK8sToken()))
-            .setCertificateAuthority(null) // may need to change in production !
-            .build();
+                .setBasePath(config.getK8sAddress())
+                .setVerifyingSsl(false) // may need to change in production !
+                .setAuthentication(new AccessTokenAuthentication(config.getK8sToken()))
+                .setCertificateAuthority(null) // may need to change in production !
+                .build();
 
         defineApis(client);
     }

@@ -6,15 +6,17 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Getter @Setter @NoArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
 public class KOptions {
-    
+
     @JsonProperty("ttlJobInSeconds")
     private int ttlJob = 500;
-    
+
     @JsonProperty("statusRetry")
     private int statusRetry = 5;
-    
+
     @JsonProperty("statusRetryWaitInMillis")
     private int statusRetryWait = 2000;
 

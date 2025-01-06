@@ -12,8 +12,8 @@ import lombok.extern.log4j.Log4j;
 @Log4j
 public class KSubmit extends GaswSubmit {
 
-    final private KManager 	    manager;
-    final private KMonitor      monitor;
+    final private KManager manager;
+    final private KMonitor monitor;
 
     public KSubmit(final GaswInput gaswInput, final KMinorStatusGenerator minorStatusServiceGenerator, final KManager manager, final KMonitor monitor) throws GaswException {
         super(gaswInput, minorStatusServiceGenerator);
@@ -27,7 +27,7 @@ public class KSubmit extends GaswSubmit {
         final String cmd = "bash " + GaswConstants.SCRIPT_ROOT + "/" + scriptName;
         final String jobID = scriptName.substring(0, scriptName.lastIndexOf("."));
         final String params = gaswInput.getParameters().stream()
-            .collect(Collectors.joining(" "));
+                .collect(Collectors.joining(" "));
 
         if ( ! monitor.isAlive()) {
             monitor.start();

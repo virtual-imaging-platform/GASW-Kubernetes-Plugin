@@ -13,9 +13,7 @@ import fr.insalyon.creatis.gasw.GaswConfiguration;
 import fr.insalyon.creatis.gasw.GaswConstants;
 import fr.insalyon.creatis.gasw.GaswException;
 import fr.insalyon.creatis.gasw.execution.GaswStatus;
-import fr.insalyon.creatis.gasw.executor.kubernetes.KMonitor;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.KConfiguration;
-import fr.insalyon.creatis.gasw.executor.kubernetes.config.KConstants;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.json.properties.KConfig;
 import fr.insalyon.creatis.gasw.executor.kubernetes.config.json.properties.KVolumeData;
 import io.kubernetes.client.openapi.ApiException;
@@ -29,14 +27,14 @@ import lombok.extern.log4j.Log4j;
 @Log4j
 public class KManager {
 
-    final private String				workflowName;
-    final private List<KVolume>		    customVolumes;
-    final private KConfig               config;
-    private KVolume 					workflowVolume;
-    
-    private volatile ArrayList<KJob> 	jobs;
-    private Boolean						end;
-    private Boolean						inited;
+    final private String workflowName;
+    final private List<KVolume> customVolumes;
+    final private KConfig config;
+    private KVolume workflowVolume;
+
+    private volatile ArrayList<KJob> jobs;
+    private Boolean end;
+    private Boolean inited;
 
     public KManager(final String workflowName) {
         this.workflowName = workflowName;
@@ -87,31 +85,31 @@ public class KManager {
         final CoreV1Api api = KConfiguration.getInstance().getCoreApi();
         final V1NamespaceList list = api.listNamespace().execute();
         final String targetName = config.getK8sNamespace();
-        
+
         for (final V1Namespace ns : list.getItems()) {
             final String name = ns.getMetadata().getName();
-            
+
             if (name.equals(targetName)) {
                 return;
             }
         }
 
         final V1Namespace ns = new V1Namespace()
-            .metadata(new V1ObjectMeta().name(targetName));
+                .metadata(new V1ObjectMeta().name(targetName));
 
         api.createNamespace(ns).execute();
     }
-    
+
     /**
      * Check all of the volumes presents inside the config
      */
     public void checkAllVolumes() throws ApiException {
         // workflow
         final KVolumeData wVolumeData = new KVolumeData()
-            .setName(workflowName)
-            .setMountPathContainer(config.getWorkflowsLocation() + workflowName)
-            .setAccessModes("ReadWriteMany")
-            .setNfsFolder(workflowName);
+                .setName(workflowName)
+                .setMountPathContainer(config.getWorkflowsLocation() + workflowName)
+                .setAccessModes("ReadWriteMany")
+                .setNfsFolder(workflowName);
 
         workflowVolume = new KVolume(KConfiguration.getInstance(), wVolumeData);
         workflowVolume.createPV();
@@ -138,25 +136,25 @@ public class KManager {
         final String[] dirs = { GaswConstants.OUT_ROOT, GaswConstants.ERR_ROOT, "./cache" };
 
         Arrays.stream(dirs)
-            .map(File::new)
-            .forEach(dir -> {
-                if ( ! dir.exists()) {
-                    dir.mkdirs();
-                }
-            });
+                .map(File::new)
+                .forEach(dir -> {
+                    if ( ! dir.exists()) {
+                        dir.mkdirs();
+                    }
+                });
     }
 
     /**
      * Check if the init state is finished
      */
-    private boolean isReady() {
+    private boolean isReady() throws InterruptedException{
         int i = 0;
 
         while (true) {
             if (inited != null && inited == true) {
                 return true;
             } else if (i < config.getOptions().getMaxRetryToPush() || (inited != null && inited == false)) {
-                Utils.sleepNException(10_000);
+                Thread.sleep(10_000);
             } else {
                 return false;
             }
@@ -167,7 +165,7 @@ public class KManager {
     /**
      * Create a thread instance that will launch job when ressources
      * are available (volumes).
-     * The end variable is used to know if a thread instance 
+     * The end variable is used to know if a thread instance
      * has already been launched.
      */
     private void submitter(final KJob exec) {
@@ -181,7 +179,7 @@ public class KManager {
     }
 
     /**
-     * Public submitter that prepare the K8sJob object and wait for 
+     * Public submitter that prepare the K8sJob object and wait for
      * the manager to be initied (in case of slow cluster)
      */
     public void submitter(final String cmd, final String dockerImage, final String jobID) {
@@ -190,22 +188,27 @@ public class KManager {
 
         volumes.add(workflowVolume);
         volumes.addAll(customVolumes);
-        if (isReady()) {
-            exec.getData().setCommand(cmd);
-            exec.getData().setImage(dockerImage);
-            exec.getData().setVolumes(volumes);
-            exec.getData().setWorkingDir(workflowVolume.getData().getMountPathContainer());
-            exec.configure();
-            submitter(exec);
-        } else {
-            exec.getData().setStatus(GaswStatus.STALLED);
+
+        try {
+            if (isReady()) {
+                exec.getData().setCommand(cmd);
+                exec.getData().setImage(dockerImage);
+                exec.getData().setVolumes(volumes);
+                exec.getData().setWorkingDir(workflowVolume.getData().getMountPathContainer());
+                exec.configure();
+                submitter(exec);
+            } else {
+                exec.getData().setStatus(GaswStatus.STALLED);
+            }
+        } catch (InterruptedException e) {
+            log.error("Interrupted exception at submitter: ", e);
         }
     }
 
-    public ArrayList<KJob> getUnfinishedJobs() { 
+    public ArrayList<KJob> getUnfinishedJobs() {
         return jobs.stream()
-               .filter(job -> !job.isTerminated())
-               .collect(Collectors.toCollection(ArrayList::new));
+                .filter(job -> ! job.isTerminated())
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     public KJob getJob(final String jobId) {
@@ -213,7 +216,7 @@ public class KManager {
                 .filter(job -> job.getData().getJobID().equals(jobId))
                 .findFirst()
                 .orElse(null);
-    } 
+    }
 
     @NoArgsConstructor
     class KRunner implements Runnable {
@@ -262,7 +265,7 @@ public class KManager {
         private synchronized void checker() {
             if ( ! ready && workflowVolume.isAvailable()) {
                 for (final KVolume custom : customVolumes) {
-                    if (custom.isAvailable() ==  false) {
+                    if (custom.isAvailable() == false) {
                         break;
                     }
                 }

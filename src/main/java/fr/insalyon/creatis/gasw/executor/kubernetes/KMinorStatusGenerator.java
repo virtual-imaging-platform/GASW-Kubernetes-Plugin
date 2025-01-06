@@ -10,8 +10,12 @@ import lombok.NoArgsConstructor;
 public class KMinorStatusGenerator extends GaswMinorStatusServiceGenerator {
 
     @Override
-    public String getClient() { return null; }
+    public String getClient() {
+        return null;
+    }
 
     @Override
-    public String getServiceCall() { return null; }
+    public String getServiceCall() {
+        return null;
+    }
 }

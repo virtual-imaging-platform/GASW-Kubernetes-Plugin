@@ -15,20 +15,22 @@ import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimVolumeSource;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
 
-@Getter @Setter @NoArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
 public class KJobData {
 
-    private String          workflowName;
-    private String          jobID;
-    private String          kubernetesJobID;
-    
-    private String          command;
-    private List<KVolume>   kVolumes;
+    private String workflowName;
+    private String jobID;
+    private String kubernetesJobID;
 
-    private V1Job 			job;
-    private V1Container     container;
+    private String command;
+    private List<KVolume> kVolumes;
 
-    private GaswStatus      status;
+    private V1Job job;
+    private V1Container container;
+
+    private GaswStatus status;
 
     public void setVolumes(final List<KVolume> volumes) {
         this.kVolumes = volumes;
@@ -48,8 +50,9 @@ public class KJobData {
         container.workingDir(workingDir);
     }
 
-     /**
+    /**
      * Stdout & stderr redirectors
+     * 
      * @return Initial command redirected to out & err files
      */
     private List<String> getWrappedCommand() {
@@ -70,25 +73,23 @@ public class KJobData {
      * @return file that contain the log (inside container)
      */
     private String getContainerLogPath(final String extension) {
-        return "./" + extension + "/" + getJobID()+ ".sh" + "." + extension;
+        return "./" + extension + "/" + getJobID() + ".sh" + "." + extension;
     }
 
     public List<V1Volume> getVolumes() {
         return getKVolumes().stream()
-            .map(vol -> new V1Volume()
-                .name(vol.getKubernetesName())
-                .persistentVolumeClaim(new V1PersistentVolumeClaimVolumeSource()
-                    .claimName(vol.getClaimName()))
-            )
-            .collect(Collectors.toList());
+                .map(vol -> new V1Volume()
+                        .name(vol.getKubernetesName())
+                        .persistentVolumeClaim(new V1PersistentVolumeClaimVolumeSource()
+                                .claimName(vol.getClaimName())))
+                .collect(Collectors.toList());
     }
 
     public List<V1VolumeMount> getVolumesMounts() {
         return getKVolumes().stream()
-            .map(vol -> new V1VolumeMount()
-                .name(vol.getKubernetesName())
-                .mountPath(vol.getData().getMountPathContainer())
-            )
-            .collect(Collectors.toList());
+                .map(vol -> new V1VolumeMount()
+                        .name(vol.getKubernetesName())
+                        .mountPath(vol.getData().getMountPathContainer()))
+                .collect(Collectors.toList());
     }
 }
