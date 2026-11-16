@@ -32,7 +32,7 @@ public class KExecutor implements ExecutorPlugin {
         if ( ! loaded) {
             final KConfiguration conf = KConfiguration.getInstance();
 
-            conf.init(KConstants.pluginConfig);
+            conf.init(KConstants.getPluginConfig());
             manager = new KManager(GaswConfiguration.getInstance().getSimulationID());
             manager.init();
 
@@ -54,11 +54,17 @@ public class KExecutor implements ExecutorPlugin {
     }
 
     @Override
+    public GaswInput getGaswInput() {
+        return submitter.getGaswInput();
+    }
+
+    @Override
     public void terminate(boolean force) throws GaswException {
         // Plugin
         manager.destroy();
 
         // Gasw
         monitor.finish();
+        loaded = false;
     }
 }
